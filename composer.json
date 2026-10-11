@@ -1,0 +1,19 @@
+{
+    "name": "nhatrang/tourism-web",
+    "description": "Hệ thống quảng bá địa điểm ẩm thực và du lịch Nha Trang",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Nha Trang Tourism Dev Team"
+        }
+    ],
+    "require": {
+        "php": ">=8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    }
+}

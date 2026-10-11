@@ -1,0 +1,26 @@
+# Environment Configuration
+.env
+
+# Dependencies
+/vendor/
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs & Temporary files
+*.log
+scratch/
+
+# Uploaded Files (keep folder structure)
+public/uploads/locations/*
+!public/uploads/locations/.gitkeep
+public/uploads/qrcodes/*
+!public/uploads/qrcodes/.gitkeep
