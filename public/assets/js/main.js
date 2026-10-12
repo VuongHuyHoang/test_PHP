@@ -24,8 +24,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const primaryTileLayer = taoTileLayer();
         primaryTileLayer.addTo(map);
 
-        // Lớp nền phụ: Bản đồ sáng Positron (miễn phí không cần key)
-        const cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        // Lớp nền phụ: Bản đồ sáng Positron
+        const keyParam = (window.MAP_API_KEY) ? '?key=' + encodeURIComponent(window.MAP_API_KEY) : '';
+        const cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' + keyParam, {
             maxZoom: 20,
             subdomains: 'abcd',
             attribution: '&copy; OpenStreetMap &copy; CARTO'
@@ -63,7 +64,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // 2. Hàm tạo tile layer theo cấu hình MAP_PROVIDER và MAP_API_KEY
     function taoTileLayer() {
         const provider = (window.MAP_PROVIDER || 'cartodb').toLowerCase();
-        const apiKey = window.MAP_API_KEY || '';
+        const apiKey = (window.MAP_API_KEY || '').trim();
+        const keyParam = apiKey ? '?key=' + encodeURIComponent(apiKey) : '';
 
         if (apiKey) {
             if (provider === 'mapbox') {
@@ -86,8 +88,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        // Mặc định: CartoDB Voyager miễn phí 100%, không cần API Key, ổn định toàn cầu
-        return L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        // Mặc định: CartoDB Voyager có gắn API Key để xóa watermark
+        return L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' + keyParam, {
             maxZoom: 20,
             subdomains: 'abcd',
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
