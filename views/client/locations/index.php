@@ -20,60 +20,72 @@
         <div id="map"></div>
     </div>
 
-    <!-- Bộ Lọc Trực Tiếp (Live Filter Panel) -->
+    <!-- Bộ Lọc Địa Điểm (Filter Panel) -->
     <div class="filter-panel mb-4 shadow-sm">
-        <form id="live-filter-form" class="row g-3 align-items-center">
-            <!-- Tìm kiếm từ khóa -->
-            <div class="col-lg-3 col-md-6">
-                <label class="form-label small fw-semibold text-muted mb-1">Tìm theo tên hoặc đường</label>
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" name="tu_khoa" class="form-control border-start-0" placeholder="Nem nướng, Bờ Kè, Tháp Bà..." value="<?= htmlspecialchars($filters['tu_khoa'] ?? '') ?>">
+        <form id="live-filter-form" action="<?= url('locations') ?>" method="GET">
+            <div class="row g-3 align-items-end">
+                <!-- Tìm kiếm từ khóa -->
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label small fw-semibold text-muted mb-1">Tìm theo tên hoặc đường</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="tu_khoa" class="form-control border-start-0" placeholder="Nem nướng, Bờ Kè, Tháp Bà..." value="<?= htmlspecialchars($filters['tu_khoa'] ?? '') ?>">
+                    </div>
+                </div>
+
+                <!-- Phân loại hình -->
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label small fw-semibold text-muted mb-1">Phân loại hình</label>
+                    <select name="loai" class="form-select form-select-sm">
+                        <option value="">Tất cả loại hình</option>
+                        <option value="am_thuc" <?= ($filters['loai'] ?? '') === 'am_thuc' ? 'selected' : '' ?>>Ẩm thực & Quán ăn</option>
+                        <option value="du_lich" <?= ($filters['loai'] ?? '') === 'du_lich' ? 'selected' : '' ?>>Du lịch & Điểm đến</option>
+                    </select>
+                </div>
+
+                <!-- Danh mục cụ thể -->
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label small fw-semibold text-muted mb-1">Danh mục trải nghiệm</label>
+                    <select name="danh_muc_id" class="form-select form-select-sm">
+                        <option value="">Tất cả danh mục</option>
+                        <?php foreach ($danhMucList as $dm): ?>
+                            <option value="<?= $dm['id'] ?>" data-loai="<?= htmlspecialchars($dm['loai_danh_muc']) ?>" <?= ($filters['danh_muc_id'] ?? '') == $dm['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($dm['ten_danh_muc']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- Khung giá -->
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label small fw-semibold text-muted mb-1">Khoảng giá</label>
+                    <select name="muc_gia" class="form-select form-select-sm">
+                        <option value="">Tất cả mức giá</option>
+                        <option value="duoi_50k" <?= ($filters['muc_gia'] ?? '') === 'duoi_50k' ? 'selected' : '' ?>>Dưới 50.000 đ</option>
+                        <option value="50k_200k" <?= ($filters['muc_gia'] ?? '') === '50k_200k' ? 'selected' : '' ?>>50.000 đ - 200.000 đ</option>
+                        <option value="tren_200k" <?= ($filters['muc_gia'] ?? '') === 'tren_200k' ? 'selected' : '' ?>>Trên 200.000 đ</option>
+                    </select>
+                </div>
+
+                <!-- Cờ có vé online -->
+                <div class="col-lg-2 col-md-6">
+                    <div class="form-check mb-1">
+                        <input class="form-check-input" type="checkbox" name="co_ban_ve" value="1" id="checkCoBanVe" <?= (!empty($filters['co_ban_ve'])) ? 'checked' : '' ?>>
+                        <label class="form-check-label small fw-medium text-dark" for="checkCoBanVe">
+                            Có vé online
+                        </label>
+                    </div>
                 </div>
             </div>
 
-            <!-- Phân loại hình -->
-            <div class="col-lg-2 col-md-6">
-                <label class="form-label small fw-semibold text-muted mb-1">Phân loại</label>
-                <select name="loai" class="form-select form-select-sm">
-                    <option value="">Tất cả loại hình</option>
-                    <option value="am_thuc" <?= ($filters['loai'] ?? '') === 'am_thuc' ? 'selected' : '' ?>>Ẩm thực & Quán ăn</option>
-                    <option value="du_lich" <?= ($filters['loai'] ?? '') === 'du_lich' ? 'selected' : '' ?>>Du lịch & Điểm đến</option>
-                </select>
-            </div>
-
-            <!-- Danh mục cụ thể -->
-            <div class="col-lg-3 col-md-6">
-                <label class="form-label small fw-semibold text-muted mb-1">Danh mục trải nghiệm</label>
-                <select name="danh_muc_id" class="form-select form-select-sm">
-                    <option value="">Tất cả danh mục</option>
-                    <?php foreach ($danhMucList as $dm): ?>
-                        <option value="<?= $dm['id'] ?>" <?= ($filters['danh_muc_id'] ?? '') == $dm['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($dm['ten_danh_muc']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <!-- Khung giá -->
-            <div class="col-lg-2 col-md-6">
-                <label class="form-label small fw-semibold text-muted mb-1">Khoảng giá</label>
-                <select name="muc_gia" class="form-select form-select-sm">
-                    <option value="">Tất cả mức giá</option>
-                    <option value="duoi_50k" <?= ($filters['muc_gia'] ?? '') === 'duoi_50k' ? 'selected' : '' ?>>Dưới 50.000 đ</option>
-                    <option value="50k_200k" <?= ($filters['muc_gia'] ?? '') === '50k_200k' ? 'selected' : '' ?>>50.000 đ - 200.000 đ</option>
-                    <option value="tren_200k" <?= ($filters['muc_gia'] ?? '') === 'tren_200k' ? 'selected' : '' ?>>Trên 200.000 đ</option>
-                </select>
-            </div>
-
-            <!-- Cờ có vé online -->
-            <div class="col-lg-2 col-md-12 d-flex align-items-center mt-lg-4 pt-lg-2">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="co_ban_ve" value="1" id="checkCoBanVe" <?= (!empty($filters['co_ban_ve'])) ? 'checked' : '' ?>>
-                    <label class="form-check-label small fw-medium" for="checkCoBanVe">
-                        Có bán vé online
-                    </label>
-                </div>
+            <!-- Hàng nút thao tác lọc -->
+            <div class="d-flex justify-content-end align-items-center gap-2 mt-3 pt-2 border-top">
+                <button type="button" id="btn-reset-filter" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại
+                </button>
+                <button type="submit" id="btn-submit-filter" class="btn btn-coral btn-sm rounded-pill px-4 fw-semibold">
+                    <i class="bi bi-funnel-fill me-1"></i>Lọc kết quả
+                </button>
             </div>
         </form>
     </div>
@@ -83,10 +95,10 @@
         <h4 class="h5 fw-bold text-dark mb-0">
             Danh sách địa điểm (<span id="locations-count"><?= count($diaDiemList) ?></span>)
         </h4>
-        <span class="text-muted small">Bấm vào thẻ để di chuyển nhanh trên bản đồ</span>
+        <span class="text-muted small">Bấm vào thẻ để xem vị trí trên bản đồ</span>
     </div>
 
-    <!-- Danh sách thẻ địa điểm (được render động và đồng bộ với bản đồ) -->
+    <!-- Danh sách thẻ địa điểm (render động và đồng bộ với bản đồ) -->
     <div class="row g-4" id="locations-container">
         <?php foreach ($diaDiemList as $dd): ?>
             <?php 

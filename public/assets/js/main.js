@@ -20,28 +20,115 @@ document.addEventListener('DOMContentLoaded', function () {
             scrollWheelZoom: true
         }).setView([12.2475, 109.1967], 13);
 
-        // Lớp nền bản đồ OpenStreetMap
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors'
+        // Sử dụng CartoDB Voyager làm lớp nền chính (ổn định 100%, CDN toàn cầu, không bị lỗi SSL cert)
+        const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20,
+            subdomains: 'abcd',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
         }).addTo(map);
+
+        // Lớp nền phụ: Bản đồ sáng Positron
+        const cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20,
+            subdomains: 'abcd',
+            attribution: '&copy; OpenStreetMap &copy; CARTO'
+        });
+
+        // Bổ sung điều khiển chuyển đổi lớp nền bản đồ
+        L.control.layers({
+            "Bản đồ Chi tiết (Voyager)": cartoVoyager,
+            "Bản đồ Tinh gọn (Positron)": cartoPositron
+        }, null, { position: 'topright' }).addTo(map);
 
         markersLayer = L.layerGroup().addTo(map);
 
-        // Tải dữ liệu ban đầu
-        taiDuLieuBanDo();
+        // Đảm bảo kích thước bản đồ được tính toán chuẩn xác, tránh bị ô xám
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 200);
 
-        // Gắn sự kiện bộ lọc nếu có form lọc
+        // Đọc tham số bộ lọc từ URL ban đầu (ví dụ: ?loai=am_thuc khi bấm từ Navbar)
+        const initialFilters = docThamSoUrl();
+
+        // Đồng bộ giá trị vào Form nếu có
+        dongBoFormTuUrl(initialFilters);
+
+        // Tải dữ liệu ban đầu theo tham số URL
+        taiDuLieuBanDo(initialFilters);
+
+        // Gắn sự kiện bộ lọc (Nút Lọc Kết Quả & Đặt Lại)
         ganSuKienBoLoc();
 
         // Gắn sự kiện định vị GPS
         ganSuKienDinhVi();
     }
 
-    // 2. Hàm tải dữ liệu địa điểm từ API
+    // 2. Hàm đọc tham số từ URL hiện tại
+    function docThamSoUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const filters = {};
+        if (urlParams.get('loai')) filters.loai = urlParams.get('loai');
+        if (urlParams.get('danh_muc_id')) filters.danh_muc_id = urlParams.get('danh_muc_id');
+        if (urlParams.get('tu_khoa')) filters.tu_khoa = urlParams.get('tu_khoa');
+        if (urlParams.get('muc_gia')) filters.muc_gia = urlParams.get('muc_gia');
+        if (urlParams.get('co_ban_ve')) filters.co_ban_ve = urlParams.get('co_ban_ve');
+        return filters;
+    }
+
+    // 3. Đồng bộ giá trị vào Form bộ lọc
+    function dongBoFormTuUrl(filters) {
+        const form = document.getElementById('live-filter-form');
+        if (!form) return;
+
+        if (filters.loai && form.elements['loai']) {
+            form.elements['loai'].value = filters.loai;
+        }
+        if (filters.danh_muc_id && form.elements['danh_muc_id']) {
+            form.elements['danh_muc_id'].value = filters.danh_muc_id;
+        }
+        if (filters.tu_khoa && form.elements['tu_khoa']) {
+            form.elements['tu_khoa'].value = filters.tu_khoa;
+        }
+        if (filters.muc_gia && form.elements['muc_gia']) {
+            form.elements['muc_gia'].value = filters.muc_gia;
+        }
+        if (form.elements['co_ban_ve']) {
+            form.elements['co_ban_ve'].checked = (filters.co_ban_ve === '1');
+        }
+
+        locDanhMucTheoLoai();
+    }
+
+    // 4. Lọc dropdown Danh mục khi chọn Phân loại hình để tránh mâu thuẫn
+    function locDanhMucTheoLoai() {
+        const form = document.getElementById('live-filter-form');
+        if (!form || !form.elements['loai'] || !form.elements['danh_muc_id']) return;
+
+        const loaiDuocChon = form.elements['loai'].value;
+        const selectDanhMuc = form.elements['danh_muc_id'];
+        const options = selectDanhMuc.querySelectorAll('option');
+
+        options.forEach(opt => {
+            if (opt.value === '') {
+                opt.style.display = '';
+                return;
+            }
+            const optLoai = opt.getAttribute('data-loai');
+            if (!loaiDuocChon || optLoai === loaiDuocChon) {
+                opt.style.display = '';
+            } else {
+                opt.style.display = 'none';
+                if (opt.selected) {
+                    selectDanhMuc.value = '';
+                }
+            }
+        });
+    }
+
+    // 5. Hàm tải dữ liệu địa điểm từ API
     function taiDuLieuBanDo(filters = {}) {
         const query = new URLSearchParams(filters).toString();
-        const apiUrl = (window.APP_URL || '') + '/api/locations?' + query;
+        const apiUrl = (window.APP_URL || '') + '/api/locations' + (query ? '?' + query : '');
 
         fetch(apiUrl)
             .then(res => res.json())
@@ -50,12 +137,27 @@ document.addEventListener('DOMContentLoaded', function () {
                     allLocations = res.data;
                     renderMarkers(allLocations);
                     capNhatDanhSachCards(allLocations);
+
+                    // Tự động căn chỉnh tầm nhìn bản đồ nếu có địa điểm
+                    if (allLocations.length > 0 && map) {
+                        const bounds = [];
+                        allLocations.forEach(item => {
+                            const lat = parseFloat(item.vi_do);
+                            const lng = parseFloat(item.kinh_do);
+                            if (!isNaN(lat) && !isNaN(lng)) {
+                                bounds.push([lat, lng]);
+                            }
+                        });
+                        if (bounds.length > 0) {
+                            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+                        }
+                    }
                 }
             })
             .catch(err => console.error('Lỗi tải dữ liệu địa điểm:', err));
     }
 
-    // 3. Render Custom Markers trên Leaflet
+    // 6. Render Custom Markers trên Leaflet
     function renderMarkers(locations) {
         if (!markersLayer) return;
         markersLayer.clearLayers();
@@ -117,7 +219,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // 4. Cập nhật thẻ địa điểm (Cards) đồng bộ trên giao diện
+    // 7. Cập nhật thẻ địa điểm (Cards) đồng bộ trên giao diện
     function capNhatDanhSachCards(locations) {
         const container = document.getElementById('locations-container');
         const countBadge = document.getElementById('locations-count');
@@ -133,8 +235,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div class="col-12 text-center py-5">
                     <div class="p-4 bg-white rounded-3 border">
                         <i class="bi bi-search display-4 text-muted mb-3 d-block"></i>
-                        <h5 class="fw-bold text-secondary">Không tìm thấy địa điểm nào</h5>
-                        <p class="text-muted small mb-0">Hãy thử đổi từ khóa, mở rộng khung giá hoặc chọn tất cả danh mục.</p>
+                        <h5 class="fw-bold text-secondary">Không tìm thấy địa điểm phù hợp</h5>
+                        <p class="text-muted small mb-3">Hãy thử đổi từ khóa, mở rộng khung giá hoặc chọn đặt lại bộ lọc.</p>
+                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-4" onclick="document.getElementById('btn-reset-filter')?.click();">
+                            Xem tất cả địa điểm
+                        </button>
                     </div>
                 </div>
             `;
@@ -200,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function () {
         container.innerHTML = html;
     }
 
-    // 5. Tập trung vào bản đồ khi click thẻ (Bidirectional Interaction)
+    // 8. Tập trung vào bản đồ khi click thẻ (Bidirectional Interaction)
     window.focusOnMap = function(id, lat, lng) {
         if (!map || !markersLayer) return;
 
@@ -220,34 +325,69 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
 
-    // 6. Gắn sự kiện bộ lọc trực tiếp không reload (Live Filter)
+    // 9. Gắn sự kiện bộ lọc có Nút Bấm xác nhận và Nút Đặt lại
     function ganSuKienBoLoc() {
         const filterForm = document.getElementById('live-filter-form');
         if (!filterForm) return;
 
-        const inputs = filterForm.querySelectorAll('select, input');
-        inputs.forEach(input => {
-            input.addEventListener('change', function () {
-                guiYeuCauLoc();
+        // Tự động lọc các danh mục khi chọn Phân loại hình
+        const selectLoai = filterForm.elements['loai'];
+        if (selectLoai) {
+            selectLoai.addEventListener('change', function () {
+                locDanhMucTheoLoai();
             });
-            if (input.type === 'text') {
-                input.addEventListener('keyup', debounce(function () {
-                    guiYeuCauLoc();
-                }, 300));
-            }
+        }
+
+        // Tự động nhận diện phân loại nếu chọn thẳng Danh mục
+        const selectDanhMuc = filterForm.elements['danh_muc_id'];
+        if (selectDanhMuc) {
+            selectDanhMuc.addEventListener('change', function () {
+                const opt = selectDanhMuc.options[selectDanhMuc.selectedIndex];
+                const optLoai = opt?.getAttribute('data-loai');
+                if (optLoai && selectLoai && !selectLoai.value) {
+                    selectLoai.value = optLoai;
+                }
+            });
+        }
+
+        // Xử lý khi nhấn nút Lọc Kết Quả hoặc Submit Form
+        filterForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            thucHienLocDuLieu();
         });
 
-        function guiYeuCauLoc() {
+        // Xử lý nút Đặt lại bộ lọc
+        const btnReset = document.getElementById('btn-reset-filter');
+        if (btnReset) {
+            btnReset.addEventListener('click', function () {
+                filterForm.reset();
+                locDanhMucTheoLoai();
+                if (window.history.pushState) {
+                    window.history.pushState({}, '', window.location.pathname);
+                }
+                taiDuLieuBanDo({});
+            });
+        }
+
+        function thucHienLocDuLieu() {
             const formData = new FormData(filterForm);
             const params = {};
             formData.forEach((val, key) => {
                 if (val !== '') params[key] = val;
             });
+
+            // Cập nhật URL trình duyệt để lưu lại trạng thái bộ lọc
+            const newQuery = new URLSearchParams(params).toString();
+            if (window.history.pushState) {
+                const newUrl = window.location.pathname + (newQuery ? '?' + newQuery : '');
+                window.history.pushState({}, '', newUrl);
+            }
+
             taiDuLieuBanDo(params);
         }
     }
 
-    // 7. Định vị vị trí hiện tại của du khách (Geolocation API)
+    // 10. Định vị vị trí hiện tại của du khách (Geolocation API)
     function ganSuKienDinhVi() {
         const btnLocate = document.getElementById('btn-locate-me');
         if (!btnLocate) return;
@@ -311,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // 8. Bản đồ chi tiết địa điểm đơn lẻ
+    // 11. Bản đồ chi tiết địa điểm đơn lẻ
     const detailMapEl = document.getElementById('detail-map');
     if (detailMapEl) {
         const lat = parseFloat(detailMapEl.dataset.lat);
@@ -323,10 +463,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 scrollWheelZoom: false
             }).setView([lat, lng], 15);
 
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; OpenStreetMap'
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20,
+                subdomains: 'abcd',
+                attribution: '&copy; OpenStreetMap &copy; CARTO'
             }).addTo(detailMap);
+
+            setTimeout(() => {
+                detailMap.invalidateSize();
+            }, 200);
 
             const detailIcon = L.divIcon({
                 className: 'custom-leaflet-marker-wrapper',
@@ -363,13 +508,5 @@ document.addEventListener('DOMContentLoaded', function () {
         const num = parseFloat(val) || 0;
         if (num <= 0) return 'Miễn phí';
         return num.toLocaleString('vi-VN') + ' đ';
-    }
-
-    function debounce(func, wait) {
-        let timeout;
-        return function (...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
-        };
     }
 });
