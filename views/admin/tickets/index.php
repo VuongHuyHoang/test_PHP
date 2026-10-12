@@ -1,4 +1,12 @@
-<?php require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php'; ?>
+<?php
+/**
+ * @var array $ticketLocations
+ * @var array $packages
+ * @var array $inventories
+ * @var string|null $filterNgay
+ */
+require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
+?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>

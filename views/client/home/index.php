@@ -1,4 +1,14 @@
-<?php require_once dirname(__DIR__, 2) . '/layouts/header.php'; ?>
+<?php
+/**
+ * @var array $stats
+ * @var array $spotlightLocations
+ * @var array $ticketActivities
+ * @var array $topFood
+ * @var array $topTravel
+ * @var array $categories
+ */
+require_once dirname(__DIR__, 2) . '/layouts/header.php';
+?>
 <?php require_once dirname(__DIR__, 2) . '/layouts/navbar.php'; ?>
 
 <!-- ========================================================

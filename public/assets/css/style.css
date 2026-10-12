@@ -478,3 +478,234 @@ body {
     height: 190px;
     object-fit: cover;
 }
+
+/* ========================================================
+   MODERN LOCATIONS EXPLORER & SPLIT VIEW (AIRBNB / AGODA STYLE)
+   ======================================================== */
+
+.locations-explorer-header {
+    background: linear-gradient(180deg, #f0f7f9 0%, #ffffff 100%);
+    border-bottom: 1px solid #e2e8f0;
+    padding: 24px 0 16px 0;
+}
+
+/* Quick Filter Chips */
+.quick-chips-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+}
+
+.chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 9999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    user-select: none;
+    text-decoration: none;
+}
+
+.chip-btn:hover {
+    color: var(--coastal-teal);
+    border-color: var(--coastal-teal);
+    background-color: #f0f9fa;
+}
+
+.chip-btn.active {
+    background: linear-gradient(135deg, var(--coastal-deep) 0%, var(--coastal-teal) 100%);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(19, 122, 142, 0.25);
+}
+
+/* Sticky Map Section */
+.sticky-map-wrapper {
+    position: sticky;
+    top: 75px;
+    height: calc(100vh - 100px);
+    min-height: 520px;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(11, 37, 69, 0.08);
+    border: 1px solid rgba(19, 122, 142, 0.15);
+    background: #e2e8f0;
+}
+
+.sticky-map-wrapper #map {
+    width: 100%;
+    height: 100%;
+}
+
+.map-floating-bar {
+    position: absolute;
+    top: 14px;
+    left: 60px;
+    right: 60px;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+}
+
+.map-floating-bar > * {
+    pointer-events: auto;
+}
+
+.map-pill-badge {
+    background: rgba(11, 37, 69, 0.85);
+    backdrop-filter: blur(8px);
+    color: #ffffff;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Modern Location Card */
+.location-card-modern {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(11, 37, 69, 0.04);
+}
+
+.location-card-modern:hover,
+.location-card-modern.highlighted-card {
+    transform: translateY(-4px);
+    border-color: var(--coastal-teal);
+    box-shadow: 0 12px 28px rgba(11, 37, 69, 0.1);
+}
+
+.location-card-img-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: #e2e8f0;
+}
+
+.location-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.35s ease;
+}
+
+.location-card-modern:hover .location-card-img {
+    transform: scale(1.05);
+}
+
+.card-category-glass {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(6px);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.card-ticket-glass {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(16, 185, 129, 0.95);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.location-card-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.location-card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.35;
+    margin-bottom: 6px;
+    transition: color 0.2s ease;
+}
+
+.location-card-modern:hover .location-card-title {
+    color: var(--coastal-teal);
+}
+
+.location-card-address {
+    font-size: 0.825rem;
+    color: #64748b;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.location-card-price {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--warm-coral);
+}
+
+.view-mode-btn-group .btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Mobile Map Floating Toggle Button */
+.mobile-map-toggle-fab {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1040;
+    box-shadow: 0 8px 24px rgba(11, 37, 69, 0.3);
+}
+
+@media (max-width: 991.98px) {
+    .sticky-map-wrapper {
+        position: relative;
+        top: 0;
+        height: 380px;
+        min-height: 380px;
+        margin-bottom: 24px;
+    }
+    
+    .mobile-map-toggle-fab {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+}
+

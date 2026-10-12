@@ -1,0 +1,16 @@
+{
+  "intelephense.diagnostics.undefinedVariables": false,
+  "intelephense.diagnostics.undefinedTypes": false,
+  "intelephense.environment.includePaths": [
+    "app",
+    "views"
+  ],
+  "intelephense.files.exclude": [
+    "**/.git/**",
+    "**/scratch/**",
+    "**/node_modules/**"
+  ],
+  "files.associations": {
+    "*.php": "php"
+  }
+}

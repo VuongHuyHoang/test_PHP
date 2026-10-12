@@ -1,4 +1,12 @@
-<?php require_once dirname(__DIR__, 2) . '/layouts/header.php'; ?>
+<?php
+/**
+ * @var array $diaDiem
+ * @var array $goiVeList
+ * @var array $danhGiaList
+ * @var array $diaDiemLienQuan
+ */
+require_once dirname(__DIR__, 2) . '/layouts/header.php';
+?>
 <?php require_once dirname(__DIR__, 2) . '/layouts/navbar.php'; ?>
 
 <main class="container my-4 flex-grow-1">

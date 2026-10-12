@@ -59,6 +59,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Gắn sự kiện định vị GPS
         ganSuKienDinhVi();
+
+        // Gắn sự kiện chuyển đổi chế độ xem (Split, Grid, Map)
+        ganSuKienCheDoXem();
+
+        // Gắn sự kiện quick filter chips
+        ganSuKienQuickChips();
+
+        // Gắn sự kiện sắp xếp
+        ganSuKienSapXep();
     }
 
     // 2. Hàm tạo tile layer theo cấu hình MAP_PROVIDER và MAP_API_KEY
@@ -256,9 +265,13 @@ document.addEventListener('DOMContentLoaded', function () {
     function capNhatDanhSachCards(locations) {
         const container = document.getElementById('locations-container');
         const countBadge = document.getElementById('locations-count');
+        const mapPinCount = document.getElementById('map-pin-count');
         
         if (countBadge) {
             countBadge.innerText = locations.length;
+        }
+        if (mapPinCount) {
+            mapPinCount.innerText = locations.length;
         }
 
         if (!container) return;
@@ -266,11 +279,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (locations.length === 0) {
             container.innerHTML = `
                 <div class="col-12 text-center py-5">
-                    <div class="p-4 bg-white rounded-3 border">
+                    <div class="p-4 bg-white rounded-4 border shadow-sm">
                         <i class="bi bi-search display-4 text-muted mb-3 d-block"></i>
                         <h5 class="fw-bold text-secondary">Không tìm thấy địa điểm phù hợp</h5>
                         <p class="text-muted small mb-3">Hãy thử đổi từ khóa, mở rộng khung giá hoặc chọn đặt lại bộ lọc.</p>
-                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-4" onclick="document.getElementById('btn-reset-filter')?.click();">
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-4" onclick="document.getElementById('btn-reset-filter')?.click();">
                             Xem tất cả địa điểm
                         </button>
                     </div>
@@ -282,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let html = '';
         locations.forEach(item => {
             const isFood = item.loai_danh_muc === 'am_thuc';
-            const badgeTag = isFood ? 'badge-tag-food' : 'badge-tag-travel';
+            const badgeTag = isFood ? 'badge-tag-food text-coral' : 'badge-tag-travel text-teal';
             const loaiLabel = isFood ? 'Ẩm thực' : 'Du lịch';
             const giaFormatted = formatTienTe(item.gia_thap_nhat) + ' - ' + formatTienTe(item.gia_cao_nhat);
 
@@ -293,41 +306,58 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const ticketBadge = item.co_ban_ve == 1 
-                ? '<span class="badge bg-success-subtle text-success small fw-semibold"><i class="bi bi-ticket-perforated me-1"></i>Có vé online</span>' 
+                ? '<span class="card-ticket-glass"><i class="bi bi-ticket-perforated me-1"></i>Đặt vé E-Voucher</span>' 
                 : '';
 
+            const ratingVal = parseFloat(item.diem_danh_gia || 0);
+            const reviewCount = parseInt(item.tong_danh_gia || 0);
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                if (i <= Math.floor(ratingVal)) {
+                    starsHtml += '<i class="bi bi-star-fill text-warning"></i>';
+                } else if (i === Math.ceil(ratingVal) && ratingVal % 1 >= 0.5) {
+                    starsHtml += '<i class="bi bi-star-half text-warning"></i>';
+                } else {
+                    starsHtml += '<i class="bi bi-star text-warning"></i>';
+                }
+            }
+
             html += `
-                <div class="col-lg-4 col-md-6" id="card-location-${item.id}">
-                    <div class="location-item-card" onclick="focusOnMap(${item.id}, ${item.vi_do}, ${item.kinh_do})" style="cursor: pointer;">
-                        <div class="position-relative">
-                            <img src="${item.anh_dai_dien}" class="location-thumb" alt="${item.ten_dia_diem}" loading="lazy">
-                            <div class="position-absolute top-0 start-0 m-2">
-                                <span class="badge-tag ${badgeTag}">${loaiLabel}</span>
-                            </div>
-                            <div class="position-absolute top-0 end-0 m-2">
-                                ${ticketBadge}
-                            </div>
+                <div class="col-md-6 col-sm-12" id="card-location-${item.id}">
+                    <div class="location-card-modern" onclick="focusOnMap(${item.id}, ${item.vi_do}, ${item.kinh_do})" style="cursor: pointer;">
+                        <div class="location-card-img-wrap">
+                            <img src="${item.anh_dai_dien}" class="location-card-img" alt="${item.ten_dia_diem}" loading="lazy">
+                            <span class="card-category-glass ${badgeTag}">
+                                ${loaiLabel} &bull; ${item.ten_danh_muc}
+                            </span>
+                            ${ticketBadge}
                         </div>
 
-                        <div class="p-3 d-flex flex-column flex-grow-1">
+                        <div class="location-card-body">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="text-muted small">${item.ten_danh_muc}</span>
+                                <div class="small">
+                                    ${starsHtml}
+                                    <span class="text-muted ms-1">(${reviewCount})</span>
+                                </div>
                                 ${distanceHtml}
                             </div>
                             
-                            <h5 class="fw-bold text-dark mb-1" style="font-size: 1.05rem;">
-                                ${item.ten_dia_diem}
-                            </h5>
+                            <h3 class="location-card-title">${item.ten_dia_diem}</h3>
                             
-                            <p class="text-muted small text-truncate mb-3">
+                            <div class="location-card-address">
                                 <i class="bi bi-geo-alt text-danger me-1"></i>${item.dia_chi}
-                            </p>
+                            </div>
 
                             <div class="d-flex align-items-center justify-content-between pt-2 border-top mt-auto">
-                                <span class="fw-bold small text-dark">${giaFormatted}</span>
-                                <a href="${(window.APP_URL || '')}/dia-diem/${item.duong_dan}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" onclick="event.stopPropagation();">
-                                    Chi tiết
-                                </a>
+                                <span class="location-card-price">${giaFormatted}</span>
+                                <div class="d-flex gap-1" onclick="event.stopPropagation();">
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-1" onclick="focusOnMap(${item.id}, ${item.vi_do}, ${item.kinh_do})" title="Xem vị trí trên bản đồ">
+                                        <i class="bi bi-geo-alt"></i>
+                                    </button>
+                                    <a href="${(window.APP_URL || '')}/dia-diem/${item.duong_dan}" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold">
+                                        Chi tiết
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -342,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function () {
     window.focusOnMap = function(id, lat, lng) {
         if (!map || !markersLayer) return;
 
-        map.flyTo([lat, lng], 15, { duration: 1 });
+        map.flyTo([lat, lng], 15, { duration: 0.8 });
 
         markersLayer.eachLayer(marker => {
             if (marker.locationId === id) {
@@ -351,10 +381,11 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // Đánh dấu viền card
-        document.querySelectorAll('.location-item-card').forEach(el => el.classList.remove('highlighted-card'));
+        document.querySelectorAll('.location-card-modern').forEach(el => el.classList.remove('highlighted-card'));
         const targetCard = document.getElementById(`card-location-${id}`);
         if (targetCard) {
-            targetCard.querySelector('.location-item-card')?.classList.add('highlighted-card');
+            targetCard.querySelector('.location-card-modern')?.classList.add('highlighted-card');
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     };
 
@@ -533,9 +564,133 @@ document.addEventListener('DOMContentLoaded', function () {
         return deg * (Math.PI / 180);
     }
 
-    function formatTienTe(val) {
-        const num = parseFloat(val) || 0;
-        if (num <= 0) return 'Miễn phí';
-        return num.toLocaleString('vi-VN') + ' đ';
+    // 12. Gắn sự kiện chuyển đổi chế độ xem (Split / Grid / Map)
+    function ganSuKienCheDoXem() {
+        const btnSplit = document.getElementById('btn-view-split');
+        const btnGrid = document.getElementById('btn-view-grid');
+        const btnMap = document.getElementById('btn-view-map');
+        const colList = document.getElementById('col-locations-list');
+        const colMap = document.getElementById('col-locations-map');
+
+        if (!btnSplit || !btnGrid || !btnMap || !colList || !colMap) return;
+
+        function setMode(mode) {
+            btnSplit.classList.remove('active', 'btn-primary');
+            btnSplit.classList.add('btn-outline-secondary');
+            btnGrid.classList.remove('active', 'btn-primary');
+            btnGrid.classList.add('btn-outline-secondary');
+            btnMap.classList.remove('active', 'btn-primary');
+            btnMap.classList.add('btn-outline-secondary');
+
+            colList.classList.remove('d-none', 'col-12', 'col-lg-7', 'col-xl-7');
+            colMap.classList.remove('d-none', 'col-12', 'col-lg-5', 'col-xl-5');
+
+            if (mode === 'split') {
+                btnSplit.classList.add('active', 'btn-primary');
+                btnSplit.classList.remove('btn-outline-secondary');
+                colList.classList.add('col-lg-7', 'col-xl-7');
+                colMap.classList.add('col-lg-5', 'col-xl-5');
+            } else if (mode === 'grid') {
+                btnGrid.classList.add('active', 'btn-primary');
+                btnGrid.classList.remove('btn-outline-secondary');
+                colList.classList.add('col-12');
+                colMap.classList.add('d-none');
+            } else if (mode === 'map') {
+                btnMap.classList.add('active', 'btn-primary');
+                btnMap.classList.remove('btn-outline-secondary');
+                colList.classList.add('d-none');
+                colMap.classList.add('col-12');
+            }
+
+            if (map) {
+                setTimeout(() => map.invalidateSize(), 200);
+            }
+        }
+
+        btnSplit.addEventListener('click', () => setMode('split'));
+        btnGrid.addEventListener('click', () => setMode('grid'));
+        btnMap.addEventListener('click', () => setMode('map'));
+
+        // Nút fit bounds toàn cảnh
+        const btnFit = document.getElementById('btn-fit-bounds');
+        if (btnFit && map) {
+            btnFit.addEventListener('click', function () {
+                if (allLocations.length > 0) {
+                    const bounds = [];
+                    allLocations.forEach(item => {
+                        const lat = parseFloat(item.vi_do);
+                        const lng = parseFloat(item.kinh_do);
+                        if (!isNaN(lat) && !isNaN(lng)) bounds.push([lat, lng]);
+                    });
+                    if (bounds.length > 0) map.fitBounds(bounds, { padding: [40, 40] });
+                }
+            });
+        }
+
+        // Nút mobile toggle
+        const btnMobileToggle = document.getElementById('btn-mobile-map-toggle');
+        if (btnMobileToggle) {
+            btnMobileToggle.addEventListener('click', function () {
+                const mapCol = document.getElementById('col-locations-map');
+                if (mapCol) {
+                    mapCol.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        }
+    }
+
+    // 13. Gắn sự kiện Quick Filter Chips
+    function ganSuKienQuickChips() {
+        const chips = document.querySelectorAll('[data-filter-chip]');
+        const filterForm = document.getElementById('live-filter-form');
+        if (!chips.length || !filterForm) return;
+
+        chips.forEach(chip => {
+            chip.addEventListener('click', function () {
+                const type = chip.getAttribute('data-filter-chip');
+                chips.forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+
+                if (type === 'all') {
+                    if (filterForm.elements['loai']) filterForm.elements['loai'].value = '';
+                    if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = false;
+                } else if (type === 'du_lich') {
+                    if (filterForm.elements['loai']) filterForm.elements['loai'].value = 'du_lich';
+                    if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = false;
+                } else if (type === 'am_thuc') {
+                    if (filterForm.elements['loai']) filterForm.elements['loai'].value = 'am_thuc';
+                    if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = false;
+                } else if (type === 'co_ban_ve') {
+                    if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = true;
+                }
+
+                locDanhMucTheoLoai();
+                filterForm.dispatchEvent(new Event('submit'));
+            });
+        });
+    }
+
+    // 14. Gắn sự kiện sắp xếp Client-side
+    function ganSuKienSapXep() {
+        const sortSelect = document.getElementById('sort-selector');
+        if (!sortSelect) return;
+
+        sortSelect.addEventListener('change', function () {
+            const val = this.value;
+            if (!allLocations || !allLocations.length) return;
+
+            let sorted = [...allLocations];
+            if (val === 'rating') {
+                sorted.sort((a, b) => parseFloat(b.diem_danh_gia || 0) - parseFloat(a.diem_danh_gia || 0));
+            } else if (val === 'price_asc') {
+                sorted.sort((a, b) => parseFloat(a.gia_thap_nhat || 0) - parseFloat(b.gia_thap_nhat || 0));
+            } else if (val === 'price_desc') {
+                sorted.sort((a, b) => parseFloat(b.gia_cao_nhat || 0) - parseFloat(a.gia_cao_nhat || 0));
+            } else {
+                sorted.sort((a, b) => parseInt(b.luot_xem || 0) - parseInt(a.luot_xem || 0));
+            }
+
+            capNhatDanhSachCards(sorted);
+        });
     }
 });

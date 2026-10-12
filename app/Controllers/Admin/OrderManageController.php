@@ -27,8 +27,11 @@ class OrderManageController
         $params = [];
 
         if (!empty($tuKhoa)) {
-            $sql .= " AND (dh.ma_don_hang LIKE :q OR dh.sdt_khach_hang LIKE :q OR dh.ten_khach_hang LIKE :q OR dh.email_khach_hang LIKE :q)";
-            $params['q'] = '%' . $tuKhoa . '%';
+            $sql .= " AND (dh.ma_don_hang LIKE :q_ma OR dh.sdt_khach_hang LIKE :q_sdt OR dh.ten_khach_hang LIKE :q_ten OR dh.email_khach_hang LIKE :q_email)";
+            $params['q_ma']    = '%' . $tuKhoa . '%';
+            $params['q_sdt']   = '%' . $tuKhoa . '%';
+            $params['q_ten']   = '%' . $tuKhoa . '%';
+            $params['q_email'] = '%' . $tuKhoa . '%';
         }
 
         if (!empty($trangThaiDon)) {

@@ -1,8 +1,15 @@
-<?php require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php'; ?>
-
 <?php
-    $isEdit = ($mode === 'edit');
-    $actionUrl = $isEdit ? url('admin/locations/edit/' . $location['id']) : url('admin/locations/create');
+/**
+ * @var string $mode
+ * @var array|null $location
+ * @var array $categories
+ * @var array $gallery
+ * @var array $errors
+ */
+require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
+
+$isEdit = ($mode === 'edit');
+$actionUrl = $isEdit ? url('admin/locations/edit/' . $location['id']) : url('admin/locations/create');
 ?>
 
 <div class="mb-4 d-flex justify-content-between align-items-center">

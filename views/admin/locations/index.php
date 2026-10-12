@@ -1,4 +1,13 @@
-<?php require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php'; ?>
+<?php
+/**
+ * @var array $locations
+ * @var array $categories
+ * @var string|null $tuKhoa
+ * @var string|null $loai
+ * @var int|null $danhMucId
+ */
+require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
+?>
 
 <!-- Thanh Công Cụ & Thêm Mới -->
 <div class="d-flex justify-content-between align-items-center mb-4">

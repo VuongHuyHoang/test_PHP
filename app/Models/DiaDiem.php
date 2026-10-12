@@ -41,8 +41,9 @@ class DiaDiem
         }
 
         if (!empty($filters['tu_khoa'])) {
-            $sql .= " AND (d.ten_dia_diem LIKE :tu_khoa OR d.dia_chi LIKE :tu_khoa)";
-            $params['tu_khoa'] = '%' . $filters['tu_khoa'] . '%';
+            $sql .= " AND (d.ten_dia_diem LIKE :tu_khoa_ten OR d.dia_chi LIKE :tu_khoa_dc)";
+            $params['tu_khoa_ten'] = '%' . $filters['tu_khoa'] . '%';
+            $params['tu_khoa_dc']  = '%' . $filters['tu_khoa'] . '%';
         }
 
         if (isset($filters['co_ban_ve']) && $filters['co_ban_ve'] !== '') {
@@ -100,8 +101,9 @@ class DiaDiem
         }
 
         if (!empty($filters['tu_khoa'])) {
-            $sql .= " AND (d.ten_dia_diem LIKE :tu_khoa OR d.dia_chi LIKE :tu_khoa)";
-            $params['tu_khoa'] = '%' . $filters['tu_khoa'] . '%';
+            $sql .= " AND (d.ten_dia_diem LIKE :tu_khoa_ten OR d.dia_chi LIKE :tu_khoa_dc)";
+            $params['tu_khoa_ten'] = '%' . $filters['tu_khoa'] . '%';
+            $params['tu_khoa_dc']  = '%' . $filters['tu_khoa'] . '%';
         }
 
         if (isset($filters['co_ban_ve']) && $filters['co_ban_ve'] !== '') {
@@ -188,8 +190,9 @@ class DiaDiem
         $params = [];
 
         if (!empty($filters['tu_khoa'])) {
-            $sql .= " AND (d.ten_dia_diem LIKE :tu_khoa OR d.dia_chi LIKE :tu_khoa)";
-            $params['tu_khoa'] = '%' . $filters['tu_khoa'] . '%';
+            $sql .= " AND (d.ten_dia_diem LIKE :tu_khoa_ten OR d.dia_chi LIKE :tu_khoa_dc)";
+            $params['tu_khoa_ten'] = '%' . $filters['tu_khoa'] . '%';
+            $params['tu_khoa_dc']  = '%' . $filters['tu_khoa'] . '%';
         }
 
         if (!empty($filters['danh_muc_id'])) {
