@@ -11,6 +11,8 @@ use App\Controllers\AuthController;
 use App\Controllers\BookingController;
 use App\Controllers\Admin\DashboardController;
 use App\Controllers\Admin\OrderManageController;
+use App\Controllers\Admin\LocationManageController;
+use App\Controllers\Admin\TicketManageController;
 
 // ==========================================
 // 1. ROUTE CLIENT (KHÁM PHÁ & BẢN ĐỒ)
@@ -45,6 +47,22 @@ Router::get('/voucher/{code}', [BookingController::class, 'showVoucher']);
 Router::get('/admin/dashboard', [DashboardController::class, 'index']);
 Router::get('/admin/orders', [OrderManageController::class, 'index']);
 Router::post('/admin/orders/update-status', [OrderManageController::class, 'updateStatusAction']);
+
+// Quản lý địa điểm
+Router::get('/admin/locations', [LocationManageController::class, 'index']);
+Router::get('/admin/locations/create', [LocationManageController::class, 'showCreate']);
+Router::post('/admin/locations/create', [LocationManageController::class, 'create']);
+Router::get('/admin/locations/edit/{id}', [LocationManageController::class, 'showEdit']);
+Router::post('/admin/locations/edit/{id}', [LocationManageController::class, 'edit']);
+Router::post('/admin/locations/delete/{id}', [LocationManageController::class, 'delete']);
+Router::post('/admin/locations/delete-image', [LocationManageController::class, 'deleteImage']);
+
+// Quản lý gói vé & tồn kho
+Router::get('/admin/tickets', [TicketManageController::class, 'index']);
+Router::post('/admin/tickets/create-package', [TicketManageController::class, 'createPackage']);
+Router::post('/admin/tickets/update-package', [TicketManageController::class, 'updatePackage']);
+Router::post('/admin/tickets/delete-package', [TicketManageController::class, 'deletePackage']);
+Router::post('/admin/tickets/set-inventory', [TicketManageController::class, 'setInventory']);
 
 // Điều phối yêu cầu HTTP
 Router::dispatch();

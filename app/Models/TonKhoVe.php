@@ -43,5 +43,67 @@ class TonKhoVe
         $row = $stmt->fetch();
         return $row ?: null;
     }
+
+    /**
+     * Lấy danh sách tồn kho vé theo ngày cho Admin
+     */
+    public function layDanhSach(int $limit = 50, ?string $ngay = null): array
+    {
+        $sql = "
+            SELECT tk.*, gv.ten_goi_ve, gv.gia_nguoi_lon, gv.gia_tre_em, dd.ten_dia_diem
+            FROM ton_kho_ve tk
+            JOIN goi_ve gv ON tk.goi_ve_id = gv.id
+            JOIN dia_diem dd ON gv.dia_diem_id = dd.id
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if (!empty($ngay)) {
+            $sql .= " AND tk.ngay_su_dung = :ngay";
+            $params['ngay'] = $ngay;
+        }
+
+        $sql .= " ORDER BY tk.ngay_su_dung DESC, dd.ten_dia_diem ASC LIMIT " . (int)$limit;
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Thiết lập hoặc điều chỉnh hạn mức vé cho 1 ngày
+     */
+    public function thietLapTonKho(int $goiVeId, string $ngaySuDung, int $tongSoVe): bool
+    {
+        $hienTai = $this->layTheoGoiVeVaNgay($goiVeId, $ngaySuDung);
+        if ($hienTai) {
+            // Đã có bản ghi: Cập nhật tổng vé và tính lại số vé còn lại
+            $daBan = (int)$hienTai['tong_so_ve'] - (int)$hienTai['so_ve_con_lai'];
+            $soVeConLai = max(0, $tongSoVe - $daBan);
+
+            $stmt = $this->db->prepare("
+                UPDATE ton_kho_ve 
+                SET tong_so_ve = :tong_so_ve, so_ve_con_lai = :so_ve_con_lai 
+                WHERE id = :id
+            ");
+            return $stmt->execute([
+                'tong_so_ve'    => $tongSoVe,
+                'so_ve_con_lai' => $soVeConLai,
+                'id'            => $hienTai['id']
+            ]);
+        }
+
+        // Tạo mới
+        $stmt = $this->db->prepare("
+            INSERT INTO ton_kho_ve (goi_ve_id, ngay_su_dung, tong_so_ve, so_ve_con_lai)
+            VALUES (:goi_ve_id, :ngay_su_dung, :tong_so_ve, :so_ve_con_lai)
+        ");
+        return $stmt->execute([
+            'goi_ve_id'     => $goiVeId,
+            'ngay_su_dung'  => $ngaySuDung,
+            'tong_so_ve'    => $tongSoVe,
+            'so_ve_con_lai' => $tongSoVe
+        ]);
+    }
 }
 

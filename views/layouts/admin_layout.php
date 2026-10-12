@@ -27,14 +27,25 @@
                 <i class="bi bi-shield-lock-fill text-warning fs-4"></i>
                 <span class="fs-5 fw-bold">Admin Portal</span>
             </div>
+            <?php $currentUri = $_SERVER['REQUEST_URI'] ?? ''; ?>
             <ul class="nav flex-column mt-3">
                 <li class="nav-item">
-                    <a class="nav-link active" href="<?= url('admin/dashboard') ?>">
+                    <a class="nav-link <?= str_contains($currentUri, 'admin/dashboard') ? 'active' : '' ?>" href="<?= url('admin/dashboard') ?>">
                         <i class="bi bi-speedometer2"></i>Tổng Quan
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="<?= url('admin/orders') ?>">
+                    <a class="nav-link <?= str_contains($currentUri, 'admin/locations') ? 'active' : '' ?>" href="<?= url('admin/locations') ?>">
+                        <i class="bi bi-geo-alt-fill"></i>Quản Lý Địa Điểm
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= str_contains($currentUri, 'admin/tickets') ? 'active' : '' ?>" href="<?= url('admin/tickets') ?>">
+                        <i class="bi bi-ticket-detailed-fill"></i>Gói Vé & Tồn Kho
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= str_contains($currentUri, 'admin/orders') ? 'active' : '' ?>" href="<?= url('admin/orders') ?>">
                         <i class="bi bi-qr-code-scan"></i>Tra Cứu & Soát Vé
                     </a>
                 </li>

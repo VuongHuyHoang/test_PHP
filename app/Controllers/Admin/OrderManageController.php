@@ -15,6 +15,8 @@ class OrderManageController
 
         $db = Database::getConnection();
         $tuKhoa = trim($_GET['q'] ?? '');
+        $trangThaiDon = trim($_GET['trang_thai_don'] ?? '');
+        $trangThaiTt = trim($_GET['trang_thai_tt'] ?? '');
 
         $sql = "
             SELECT dh.*, nd.ho_ten as ten_tai_khoan
@@ -25,8 +27,18 @@ class OrderManageController
         $params = [];
 
         if (!empty($tuKhoa)) {
-            $sql .= " AND (dh.ma_don_hang LIKE :q OR dh.sdt_khach_hang LIKE :q OR dh.ten_khach_hang LIKE :q)";
+            $sql .= " AND (dh.ma_don_hang LIKE :q OR dh.sdt_khach_hang LIKE :q OR dh.ten_khach_hang LIKE :q OR dh.email_khach_hang LIKE :q)";
             $params['q'] = '%' . $tuKhoa . '%';
+        }
+
+        if (!empty($trangThaiDon)) {
+            $sql .= " AND dh.trang_thai_don_hang = :tt_don";
+            $params['tt_don'] = $trangThaiDon;
+        }
+
+        if (!empty($trangThaiTt)) {
+            $sql .= " AND dh.trang_thai_thanh_toan = :tt_tt";
+            $params['tt_tt'] = $trangThaiTt;
         }
 
         $sql .= " ORDER BY dh.id DESC";
@@ -35,9 +47,11 @@ class OrderManageController
         $orders = $stmt->fetchAll();
 
         view('admin.orders.index', [
-            'title'   => 'Quản Lý Đơn Hàng & Soát Vé E-Voucher',
-            'orders'  => $orders,
-            'tuKhoa'  => $tuKhoa,
+            'title'        => 'Quản Lý Đơn Hàng & Soát Vé E-Voucher',
+            'orders'       => $orders,
+            'tuKhoa'       => $tuKhoa,
+            'trangThaiDon' => $trangThaiDon,
+            'trangThaiTt'  => $trangThaiTt,
         ]);
     }
 
