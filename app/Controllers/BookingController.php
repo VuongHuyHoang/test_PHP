@@ -88,11 +88,124 @@ class BookingController
                 $thongTinKhach
             );
 
+            // Sinh mã QR cục bộ trước
+            \App\Helpers\QrHelper::taoQrDonHang($maDonHang);
+
             flash('success', 'Đặt vé thành công! Mã đơn hàng của bạn là: ' . $maDonHang);
-            redirect(url('voucher/' . $maDonHang));
+
+            if ($phuongThuc === 'tai_quay') {
+                redirect(url('voucher/' . $maDonHang));
+            } else {
+                redirect(url('booking/payment/' . $maDonHang));
+            }
         } catch (Exception $e) {
             flash('error', 'Lỗi đặt vé: ' . $e->getMessage());
             redirect(url('booking/' . $goiVeId));
+        }
+    }
+
+    public function showPayment(string $maDonHang): void
+    {
+        AuthMiddleware::checkCustomer();
+
+        $donHang = $this->donHangModel->timTheoMa($maDonHang);
+        if (!$donHang) {
+            http_response_code(404);
+            view('layouts.404', ['title' => 'Không tìm thấy đơn hàng']);
+            return;
+        }
+
+        // Chỉ chủ đơn hàng hoặc Admin mới có quyền xem
+        if ($donHang['nguoi_dung_id'] != $_SESSION['user_id'] && ($_SESSION['user_role'] ?? '') !== 'admin') {
+            http_response_code(403);
+            die("Bạn không có quyền truy cập đơn hàng này.");
+        }
+
+        // Nếu đã thanh toán, chuyển hướng trực tiếp tới voucher
+        if ($donHang['trang_thai_thanh_toan'] === 'da_thanh_toan') {
+            redirect(url('voucher/' . $maDonHang));
+            return;
+        }
+
+        view('client.booking.payment', [
+            'title'   => 'Cổng Thanh Toán - ' . $maDonHang,
+            'donHang' => $donHang,
+        ]);
+    }
+
+    public function confirmPayment(): void
+    {
+        AuthMiddleware::checkCustomer();
+
+        $maDonHang = trim($_POST['ma_don_hang'] ?? '');
+        if (empty($maDonHang)) {
+            flash('error', 'Mã đơn hàng không hợp lệ.');
+            redirect(url(''));
+            return;
+        }
+
+        $donHang = $this->donHangModel->timTheoMa($maDonHang);
+        if (!$donHang) {
+            flash('error', 'Không tìm thấy đơn hàng.');
+            redirect(url(''));
+            return;
+        }
+
+        if ($donHang['nguoi_dung_id'] != $_SESSION['user_id'] && ($_SESSION['user_role'] ?? '') !== 'admin') {
+            http_response_code(403);
+            die("Bạn không có quyền cập nhật đơn hàng này.");
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $db->beginTransaction();
+
+            // Cập nhật trạng thái đơn hàng
+            $stmt = $db->prepare("
+                UPDATE don_hang 
+                SET trang_thai_thanh_toan = 'da_thanh_toan', 
+                    trang_thai_don_hang = 'da_xac_nhan' 
+                WHERE id = :id
+            ");
+            $stmt->execute(['id' => $donHang['id']]);
+
+            // Thêm bản ghi giao dịch thanh toán
+            $maGiaoDich = 'TXN' . date('YmdHis') . rand(100, 999);
+            $stmtGiaoDich = $db->prepare("
+                INSERT INTO giao_dich_thanh_toan 
+                (don_hang_id, cong_thanh_toan, ma_giao_dich, so_tien, loai_tien_te, du_lieu_phan_hoi, trang_thai) 
+                VALUES 
+                (:don_hang_id, :cong, :ma_gd, :so_tien, 'VND', :phan_hoi, 'thanh_cong')
+            ");
+            $stmtGiaoDich->execute([
+                'don_hang_id' => $donHang['id'],
+                'cong'        => $donHang['phuong_thuc_thanh_toan'],
+                'ma_gd'       => $maGiaoDich,
+                'so_tien'     => $donHang['tong_tien'],
+                'phan_hoi'    => json_encode([
+                    'hinh_thuc' => 'VietQR Manual Transfer',
+                    'thoi_gian' => date('Y-m-d H:i:s'),
+                    'nguoi_xac_nhan_id' => $_SESSION['user_id']
+                ], JSON_UNESCAPED_UNICODE)
+            ]);
+
+            $db->commit();
+
+            // Sinh mã QR E-Voucher trên máy chủ
+            \App\Helpers\QrHelper::taoQrDonHang($maDonHang);
+
+            // Gửi email xác nhận kèm chi tiết vé
+            $chiTiet = $this->donHangModel->chiTiet((int)$donHang['id']);
+            \App\Helpers\MailHelper::guiEmailXacNhan($donHang, $chiTiet);
+
+            flash('success', 'Thanh toán thành công! E-Voucher của bạn đã được kích hoạt.');
+            redirect(url('voucher/' . $maDonHang));
+        } catch (Exception $e) {
+            if (isset($db) && $db->inTransaction()) {
+                $db->rollBack();
+            }
+            flash('error', 'Lỗi khi xác nhận thanh toán: ' . $e->getMessage());
+            redirect(url('booking/payment/' . $maDonHang));
         }
     }
 

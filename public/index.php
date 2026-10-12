@@ -35,6 +35,8 @@ Router::get('/logout', [AuthController::class, 'logout']);
 // ==========================================
 Router::get('/booking/{id}', [BookingController::class, 'showForm']);
 Router::post('/booking/submit', [BookingController::class, 'submitBooking']);
+Router::get('/booking/payment/{code}', [BookingController::class, 'showPayment']);
+Router::post('/booking/confirm-payment', [BookingController::class, 'confirmPayment']);
 Router::get('/voucher/{code}', [BookingController::class, 'showVoucher']);
 
 // ==========================================
