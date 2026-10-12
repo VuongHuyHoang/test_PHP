@@ -293,3 +293,188 @@ body {
 .star-rating-select input:checked ~ label {
     color: #f59e0b;
 }
+
+/* ========================================================
+   AGODA-INSPIRED HOMEPAGE COMPONENTS
+   ======================================================== */
+
+/* Agoda Hero with Panoramic Coastline */
+.agoda-hero {
+    position: relative;
+    background: linear-gradient(rgba(11, 37, 69, 0.45), rgba(11, 37, 69, 0.65)), 
+                url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
+    padding: 60px 0 90px 0;
+    color: #ffffff;
+}
+
+.agoda-hero-title {
+    font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+    font-weight: 800;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    letter-spacing: -0.02em;
+}
+
+/* Floating Agoda Search Card */
+.agoda-search-card {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 16px 40px rgba(11, 37, 69, 0.16);
+    padding: 24px;
+    margin-top: 24px;
+    color: var(--text-main);
+}
+
+.agoda-tab-btn {
+    border: none;
+    background: transparent;
+    font-weight: 600;
+    color: #64748b;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.agoda-tab-btn:hover {
+    color: var(--coastal-teal);
+    background: #f1f5f9;
+}
+
+.agoda-tab-btn.active {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.search-field-box {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 14px;
+    transition: border-color 0.2s ease;
+    background: #ffffff;
+}
+
+.search-field-box:focus-within {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+/* Agoda Spotlight Cards (Large Photo Overlay) */
+.agoda-spotlight-card {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    height: 280px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.agoda-spotlight-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+}
+
+.agoda-spotlight-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.agoda-spotlight-card:hover .agoda-spotlight-img {
+    transform: scale(1.06);
+}
+
+.agoda-spotlight-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.1) 30%, rgba(11, 37, 69, 0.9) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 20px;
+    color: #ffffff;
+}
+
+/* Circle Icon Category (Agoda style carousel) */
+.circle-cat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text-main);
+    transition: transform 0.2s ease;
+}
+
+.circle-cat-item:hover {
+    transform: translateY(-4px);
+    color: var(--coastal-teal);
+}
+
+.circle-cat-icon {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(11, 37, 69, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin-bottom: 8px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+}
+
+.circle-cat-item:hover .circle-cat-icon {
+    background: #e0f2fe;
+    border-color: #38bdf8;
+    color: #0284c7;
+}
+
+/* Agoda Promo Banner Cards */
+.agoda-promo-banner {
+    border-radius: 16px;
+    padding: 24px;
+    color: #ffffff;
+    position: relative;
+    overflow: hidden;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.promo-banner-1 {
+    background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+}
+
+.promo-banner-2 {
+    background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+}
+
+.promo-banner-3 {
+    background: linear-gradient(135deg, #ea580c 0%, #f59e0b 100%);
+}
+
+/* Activity & Food Card enhancements */
+.activity-item-card {
+    background: #ffffff;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-item-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 24px rgba(11, 37, 69, 0.08);
+}
+
+.activity-thumb {
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+}

@@ -135,3 +135,4 @@ class ProfileController
         redirect(url('profile?tab=account'));
     }
 }
+
