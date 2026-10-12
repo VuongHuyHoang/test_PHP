@@ -19,6 +19,13 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
+
+    <!-- Cấu hình ứng dụng & Map API Key từ .env -->
+    <script>
+        window.APP_URL = "<?= rtrim(url(''), '/') ?>";
+        window.MAP_PROVIDER = "<?= htmlspecialchars($_ENV['MAP_PROVIDER'] ?? 'cartodb') ?>";
+        window.MAP_API_KEY = "<?= htmlspecialchars($_ENV['MAP_API_KEY'] ?? '') ?>";
+    </script>
 </head>
 <body class="d-flex flex-column min-vh-100">
 

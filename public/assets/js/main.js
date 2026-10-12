@@ -20,14 +20,11 @@ document.addEventListener('DOMContentLoaded', function () {
             scrollWheelZoom: true
         }).setView([12.2475, 109.1967], 13);
 
-        // Sử dụng CartoDB Voyager làm lớp nền chính (ổn định 100%, CDN toàn cầu, không bị lỗi SSL cert)
-        const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            maxZoom: 20,
-            subdomains: 'abcd',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        }).addTo(map);
+        // Tạo lớp nền bản đồ dựa trên cấu hình MAP_PROVIDER và MAP_API_KEY
+        const primaryTileLayer = taoTileLayer();
+        primaryTileLayer.addTo(map);
 
-        // Lớp nền phụ: Bản đồ sáng Positron
+        // Lớp nền phụ: Bản đồ sáng Positron (miễn phí không cần key)
         const cartoPositron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 20,
             subdomains: 'abcd',
@@ -36,8 +33,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Bổ sung điều khiển chuyển đổi lớp nền bản đồ
         L.control.layers({
-            "Bản đồ Chi tiết (Voyager)": cartoVoyager,
-            "Bản đồ Tinh gọn (Positron)": cartoPositron
+            "Bản đồ Mặc định": primaryTileLayer,
+            "Bản đồ Sáng (Positron)": cartoPositron
         }, null, { position: 'topright' }).addTo(map);
 
         markersLayer = L.layerGroup().addTo(map);
@@ -63,7 +60,41 @@ document.addEventListener('DOMContentLoaded', function () {
         ganSuKienDinhVi();
     }
 
-    // 2. Hàm đọc tham số từ URL hiện tại
+    // 2. Hàm tạo tile layer theo cấu hình MAP_PROVIDER và MAP_API_KEY
+    function taoTileLayer() {
+        const provider = (window.MAP_PROVIDER || 'cartodb').toLowerCase();
+        const apiKey = window.MAP_API_KEY || '';
+
+        if (apiKey) {
+            if (provider === 'mapbox') {
+                return L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=${apiKey}`, {
+                    maxZoom: 20,
+                    attribution: '&copy; Mapbox &copy; OpenStreetMap'
+                });
+            }
+            if (provider === 'maptiler') {
+                return L.tileLayer(`https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=${apiKey}`, {
+                    maxZoom: 20,
+                    attribution: '&copy; MapTiler &copy; OpenStreetMap'
+                });
+            }
+            if (provider === 'goong') {
+                return L.tileLayer(`https://tiles.goong.io/{z}/{x}/{y}.png?api_key=${apiKey}`, {
+                    maxZoom: 20,
+                    attribution: '&copy; Goong Maps'
+                });
+            }
+        }
+
+        // Mặc định: CartoDB Voyager miễn phí 100%, không cần API Key, ổn định toàn cầu
+        return L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20,
+            subdomains: 'abcd',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        });
+    }
+
+    // 3. Hàm đọc tham số từ URL hiện tại
     function docThamSoUrl() {
         const urlParams = new URLSearchParams(window.location.search);
         const filters = {};
@@ -463,11 +494,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 scrollWheelZoom: false
             }).setView([lat, lng], 15);
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                maxZoom: 20,
-                subdomains: 'abcd',
-                attribution: '&copy; OpenStreetMap &copy; CARTO'
-            }).addTo(detailMap);
+            taoTileLayer().addTo(detailMap);
 
             setTimeout(() => {
                 detailMap.invalidateSize();
