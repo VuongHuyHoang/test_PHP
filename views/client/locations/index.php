@@ -242,6 +242,7 @@ require_once dirname(__DIR__, 2) . '/layouts/navbar.php';
 
 <script>
     window.APP_URL = "<?= rtrim(url(''), '/') ?>";
+    window.INITIAL_LOCATIONS = <?= json_encode($diaDiemList, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
 </script>
 
 <?php require_once dirname(__DIR__, 2) . '/layouts/footer.php'; ?>

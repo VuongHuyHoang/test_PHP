@@ -10,6 +10,29 @@ document.addEventListener('DOMContentLoaded', function () {
     let userCoords = null;
     let allLocations = [];
 
+    // Helper tiền tệ VNĐ (Định nghĩa ở scope cao nhất để tránh ReferenceError)
+    function formatTienTe(val) {
+        const num = parseFloat(val) || 0;
+        if (num <= 0) return 'Miễn phí';
+        return num.toLocaleString('vi-VN') + ' đ';
+    }
+
+    function deg2rad(deg) {
+        return deg * (Math.PI / 180);
+    }
+
+    function tinhKhoangCachKm(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Bán kính Trái Đất (km)
+        const dLat = deg2rad(lat2 - lat1);
+        const dLon = deg2rad(lon2 - lon1);
+        const a = 
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
     const mapElement = document.getElementById('map');
 
     // 1. Khởi tạo Bản đồ Tổng quan Nha Trang
@@ -32,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
             attribution: '&copy; OpenStreetMap &copy; CARTO'
         });
 
-        // Bổ sung điều khiển chuyển đổi lớp nền bản đồ
+        // Điều khiển chuyển đổi lớp nền bản đồ
         L.control.layers({
             "Bản đồ Mặc định": primaryTileLayer,
             "Bản đồ Sáng (Positron)": cartoPositron
@@ -40,21 +63,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
         markersLayer = L.layerGroup().addTo(map);
 
-        // Đảm bảo kích thước bản đồ được tính toán chuẩn xác, tránh bị ô xám
         setTimeout(() => {
             map.invalidateSize();
         }, 200);
 
-        // Đọc tham số bộ lọc từ URL ban đầu (ví dụ: ?loai=am_thuc khi bấm từ Navbar)
+        // Đọc tham số bộ lọc từ URL ban đầu
         const initialFilters = docThamSoUrl();
+        const hasUrlFilters = Object.keys(initialFilters).length > 0;
 
         // Đồng bộ giá trị vào Form nếu có
         dongBoFormTuUrl(initialFilters);
 
-        // Tải dữ liệu ban đầu theo tham số URL
-        taiDuLieuBanDo(initialFilters);
+        // Nếu trang đã có sẵn dữ liệu server-side và không có bộ lọc URL, render markers ngay lập tức!
+        if (window.INITIAL_LOCATIONS && Array.isArray(window.INITIAL_LOCATIONS) && window.INITIAL_LOCATIONS.length > 0 && !hasUrlFilters) {
+            allLocations = window.INITIAL_LOCATIONS;
+            renderMarkers(allLocations);
+            if (allLocations.length > 0) {
+                fitMapToBounds(allLocations);
+            }
+        } else {
+            // Tải dữ liệu từ API theo tham số URL
+            taiDuLieuBanDo(initialFilters);
+        }
 
-        // Gắn sự kiện bộ lọc (Nút Lọc Kết Quả & Đặt Lại)
+        // Gắn sự kiện bộ lọc (Submit Form & Reset)
         ganSuKienBoLoc();
 
         // Gắn sự kiện định vị GPS
@@ -63,10 +95,10 @@ document.addEventListener('DOMContentLoaded', function () {
         // Gắn sự kiện chuyển đổi chế độ xem (Split, Grid, Map)
         ganSuKienCheDoXem();
 
-        // Gắn sự kiện quick filter chips
+        // Gắn sự kiện quick filter chips 1 chạm
         ganSuKienQuickChips();
 
-        // Gắn sự kiện sắp xếp
+        // Gắn sự kiện sắp xếp kết quả
         ganSuKienSapXep();
     }
 
@@ -97,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        // Mặc định: CartoDB Voyager có gắn API Key để xóa watermark
+        // Mặc định: CartoDB Voyager
         return L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' + keyParam, {
             maxZoom: 20,
             subdomains: 'abcd',
@@ -117,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return filters;
     }
 
-    // 3. Đồng bộ giá trị vào Form bộ lọc
+    // 4. Đồng bộ giá trị vào Form bộ lọc
     function dongBoFormTuUrl(filters) {
         const form = document.getElementById('live-filter-form');
         if (!form) return;
@@ -141,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function () {
         locDanhMucTheoLoai();
     }
 
-    // 4. Lọc dropdown Danh mục khi chọn Phân loại hình để tránh mâu thuẫn
+    // 5. Lọc dropdown Danh mục khi chọn Phân loại hình
     function locDanhMucTheoLoai() {
         const form = document.getElementById('live-filter-form');
         if (!form || !form.elements['loai'] || !form.elements['danh_muc_id']) return;
@@ -167,10 +199,11 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // 5. Hàm tải dữ liệu địa điểm từ API
+    // 6. Hàm tải dữ liệu địa điểm từ API
     function taiDuLieuBanDo(filters = {}) {
         const query = new URLSearchParams(filters).toString();
-        const apiUrl = (window.APP_URL || '') + '/api/locations' + (query ? '?' + query : '');
+        // Dùng relative path để đảm bảo không bị lỗi CORS bất kể truy cập từ localhost hay 127.0.0.1
+        const apiUrl = '/api/locations' + (query ? '?' + query : '');
 
         fetch(apiUrl)
             .then(res => res.json())
@@ -180,28 +213,40 @@ document.addEventListener('DOMContentLoaded', function () {
                     renderMarkers(allLocations);
                     capNhatDanhSachCards(allLocations);
 
-                    // Tự động căn chỉnh tầm nhìn bản đồ nếu có địa điểm
-                    if (allLocations.length > 0 && map) {
-                        const bounds = [];
-                        allLocations.forEach(item => {
-                            const lat = parseFloat(item.vi_do);
-                            const lng = parseFloat(item.kinh_do);
-                            if (!isNaN(lat) && !isNaN(lng)) {
-                                bounds.push([lat, lng]);
-                            }
-                        });
-                        if (bounds.length > 0) {
-                            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
-                        }
+                    if (allLocations.length > 0) {
+                        fitMapToBounds(allLocations);
                     }
                 }
             })
-            .catch(err => console.error('Lỗi tải dữ liệu địa điểm:', err));
+            .catch(err => {
+                console.error('Lỗi tải dữ liệu địa điểm từ API:', err);
+                // Fallback: nếu API lỗi mà có sẵn initial data, dùng lại
+                if (window.INITIAL_LOCATIONS) {
+                    allLocations = window.INITIAL_LOCATIONS;
+                    renderMarkers(allLocations);
+                }
+            });
     }
 
-    // 6. Render Custom Markers trên Leaflet
+    // Hàm căn chỉnh tầm nhìn bản đồ bao quát tất cả điểm
+    function fitMapToBounds(locations) {
+        if (!map || !locations || locations.length === 0) return;
+        const bounds = [];
+        locations.forEach(item => {
+            const lat = parseFloat(item.vi_do);
+            const lng = parseFloat(item.kinh_do);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                bounds.push([lat, lng]);
+            }
+        });
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+        }
+    }
+
+    // 7. Render Custom Markers trên Leaflet
     function renderMarkers(locations) {
-        if (!markersLayer) return;
+        if (!markersLayer || !map) return;
         markersLayer.clearLayers();
 
         locations.forEach(item => {
@@ -213,15 +258,15 @@ document.addEventListener('DOMContentLoaded', function () {
             const isFood = item.loai_danh_muc === 'am_thuc';
             const markerClass = isFood ? 'marker-food' : 'marker-travel';
             const iconHtml = isFood 
-                ? '<i class="bi bi-egg-fried fs-6"></i>' 
-                : '<i class="bi bi-compass fs-6"></i>';
+                ? '<i class="bi bi-egg-fried"></i>' 
+                : '<i class="bi bi-compass"></i>';
 
             const customIcon = L.divIcon({
                 className: 'custom-leaflet-marker-wrapper',
                 html: `<div class="custom-marker ${markerClass}" id="marker-point-${item.id}">${iconHtml}</div>`,
                 iconSize: [36, 36],
-                iconAnchor: [18, 18],
-                popupAnchor: [0, -20]
+                iconAnchor: [18, 36],
+                popupAnchor: [0, -36]
             });
 
             // Tính khoảng cách nếu đã có vị trí người dùng
@@ -232,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const giaFormatted = formatTienTe(item.gia_thap_nhat) + ' - ' + formatTienTe(item.gia_cao_nhat);
-            const badgeTag = isFood ? 'badge-tag-food' : 'badge-tag-travel';
+            const badgeTag = isFood ? 'badge-tag-food text-coral' : 'badge-tag-travel text-teal';
             const loaiLabel = isFood ? 'Ẩm thực' : 'Du lịch';
 
             const popupContent = `
@@ -242,10 +287,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         <span class="badge-tag ${badgeTag} mb-1 d-inline-block">${loaiLabel} &bull; ${item.ten_danh_muc}</span>
                         <h6 class="fw-bold text-dark mb-1" style="font-size: 14px;">${item.ten_dia_diem}</h6>
                         <p class="text-muted small mb-1 text-truncate">${item.dia_chi}</p>
-                        <div class="text-dark fw-semibold small mb-2">${giaFormatted}</div>
+                        <div class="text-danger fw-bold small mb-2">${giaFormatted}</div>
                         ${distanceHtml}
                         <div class="mt-2 pt-2 border-top">
-                            <a href="${(window.APP_URL || '')}/dia-diem/${item.duong_dan}" class="btn btn-sm btn-coastal w-100 py-1" style="font-size: 13px;">
+                            <a href="/dia-diem/${item.duong_dan}" class="btn btn-sm btn-primary w-100 py-1" style="font-size: 13px;">
                                 Xem chi tiết & Tọa độ
                             </a>
                         </div>
@@ -259,9 +304,14 @@ document.addEventListener('DOMContentLoaded', function () {
             marker.locationId = item.id;
             markersLayer.addLayer(marker);
         });
+
+        const mapPinCount = document.getElementById('map-pin-count');
+        if (mapPinCount) {
+            mapPinCount.innerText = locations.length;
+        }
     }
 
-    // 7. Cập nhật thẻ địa điểm (Cards) đồng bộ trên giao diện
+    // 8. Cập nhật thẻ địa điểm (Cards) đồng bộ trên giao diện
     function capNhatDanhSachCards(locations) {
         const container = document.getElementById('locations-container');
         const countBadge = document.getElementById('locations-count');
@@ -354,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-1" onclick="focusOnMap(${item.id}, ${item.vi_do}, ${item.kinh_do})" title="Xem vị trí trên bản đồ">
                                         <i class="bi bi-geo-alt"></i>
                                     </button>
-                                    <a href="${(window.APP_URL || '')}/dia-diem/${item.duong_dan}" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold">
+                                    <a href="/dia-diem/${item.duong_dan}" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold">
                                         Chi tiết
                                     </a>
                                 </div>
@@ -368,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function () {
         container.innerHTML = html;
     }
 
-    // 8. Tập trung vào bản đồ khi click thẻ (Bidirectional Interaction)
+    // 9. Tập trung vào bản đồ khi click thẻ (Bidirectional Interaction)
     window.focusOnMap = function(id, lat, lng) {
         if (!map || !markersLayer) return;
 
@@ -389,7 +439,40 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
 
-    // 9. Gắn sự kiện bộ lọc có Nút Bấm xác nhận và Nút Đặt lại
+    // 10. Hàm thực hiện lọc dữ liệu thống nhất (dùng chung cho cả Form và Quick Chips)
+    window.thucHienLocDuLieu = function(overrideParams = null) {
+        const filterForm = document.getElementById('live-filter-form');
+        let params = {};
+
+        if (overrideParams) {
+            params = { ...overrideParams };
+        } else if (filterForm) {
+            const formData = new FormData(filterForm);
+            formData.forEach((val, key) => {
+                if (val !== '') params[key] = val;
+            });
+            // Kiểm tra checkbox co_ban_ve
+            if (filterForm.elements['co_ban_ve']) {
+                if (filterForm.elements['co_ban_ve'].checked) {
+                    params['co_ban_ve'] = '1';
+                } else {
+                    delete params['co_ban_ve'];
+                }
+            }
+        }
+
+        // Cập nhật URL trình duyệt
+        const newQuery = new URLSearchParams(params).toString();
+        if (window.history.pushState) {
+            const newUrl = window.location.pathname + (newQuery ? '?' + newQuery : '');
+            window.history.pushState({}, '', newUrl);
+        }
+
+        // Gọi API lọc
+        taiDuLieuBanDo(params);
+    };
+
+    // 11. Gắn sự kiện bộ lọc Form nâng cao
     function ganSuKienBoLoc() {
         const filterForm = document.getElementById('live-filter-form');
         if (!filterForm) return;
@@ -414,10 +497,10 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        // Xử lý khi nhấn nút Lọc Kết Quả hoặc Submit Form
+        // Xử lý khi submit form
         filterForm.addEventListener('submit', function (e) {
             e.preventDefault();
-            thucHienLocDuLieu();
+            window.thucHienLocDuLieu();
         });
 
         // Xử lý nút Đặt lại bộ lọc
@@ -426,32 +509,56 @@ document.addEventListener('DOMContentLoaded', function () {
             btnReset.addEventListener('click', function () {
                 filterForm.reset();
                 locDanhMucTheoLoai();
+
+                // Đặt lại active chip về "Tất cả"
+                document.querySelectorAll('[data-filter-chip]').forEach(c => {
+                    c.classList.toggle('active', c.getAttribute('data-filter-chip') === 'all');
+                });
+
                 if (window.history.pushState) {
                     window.history.pushState({}, '', window.location.pathname);
                 }
                 taiDuLieuBanDo({});
             });
         }
-
-        function thucHienLocDuLieu() {
-            const formData = new FormData(filterForm);
-            const params = {};
-            formData.forEach((val, key) => {
-                if (val !== '') params[key] = val;
-            });
-
-            // Cập nhật URL trình duyệt để lưu lại trạng thái bộ lọc
-            const newQuery = new URLSearchParams(params).toString();
-            if (window.history.pushState) {
-                const newUrl = window.location.pathname + (newQuery ? '?' + newQuery : '');
-                window.history.pushState({}, '', newUrl);
-            }
-
-            taiDuLieuBanDo(params);
-        }
     }
 
-    // 10. Định vị vị trí hiện tại của du khách (Geolocation API)
+    // 12. Gắn sự kiện Quick Filter Chips 1 chạm
+    function ganSuKienQuickChips() {
+        const chips = document.querySelectorAll('[data-filter-chip]');
+        const filterForm = document.getElementById('live-filter-form');
+        if (!chips.length) return;
+
+        chips.forEach(chip => {
+            chip.addEventListener('click', function () {
+                const type = chip.getAttribute('data-filter-chip');
+                chips.forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+
+                if (filterForm) {
+                    if (type === 'all') {
+                        if (filterForm.elements['loai']) filterForm.elements['loai'].value = '';
+                        if (filterForm.elements['danh_muc_id']) filterForm.elements['danh_muc_id'].value = '';
+                        if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = false;
+                    } else if (type === 'du_lich') {
+                        if (filterForm.elements['loai']) filterForm.elements['loai'].value = 'du_lich';
+                        if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = false;
+                    } else if (type === 'am_thuc') {
+                        if (filterForm.elements['loai']) filterForm.elements['loai'].value = 'am_thuc';
+                        if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = false;
+                    } else if (type === 'co_ban_ve') {
+                        if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = true;
+                    }
+                    locDanhMucTheoLoai();
+                }
+
+                // Thực hiện lọc trực tiếp
+                window.thucHienLocDuLieu();
+            });
+        });
+    }
+
+    // 13. Định vị GPS người dùng
     function ganSuKienDinhVi() {
         const btnLocate = document.getElementById('btn-locate-me');
         if (!btnLocate) return;
@@ -467,7 +574,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             navigator.geolocation.getCurrentPosition(
                 function (position) {
-                    btnLocate.innerHTML = '<i class="bi bi-geo-alt-fill text-danger me-1"></i> Đã định vị vị trí của bạn';
+                    btnLocate.innerHTML = '<i class="bi bi-geo-alt-fill text-danger me-1"></i> Vị trí của bạn';
                     btnLocate.disabled = false;
 
                     userCoords = {
@@ -475,14 +582,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         lng: position.coords.longitude
                     };
 
-                    // Đặt marker vị trí người dùng
-                    if (userMarker) {
+                    if (userMarker && map) {
                         map.removeLayer(userMarker);
                     }
 
                     const userIcon = L.divIcon({
                         className: 'custom-leaflet-marker-wrapper',
-                        html: '<div class="custom-marker marker-user"><i class="bi bi-person-fill fs-6"></i></div>',
+                        html: '<div class="custom-marker marker-user"><i class="bi bi-person-fill"></i></div>',
                         iconSize: [36, 36],
                         iconAnchor: [18, 18]
                     });
@@ -492,79 +598,23 @@ document.addEventListener('DOMContentLoaded', function () {
                         .bindPopup('<strong>Vị trí hiện tại của bạn</strong>')
                         .openPopup();
 
-                    map.flyTo([userCoords.lat, userCoords.lng], 14, { duration: 1.2 });
+                    map.flyTo([userCoords.lat, userCoords.lng], 14, { duration: 1 });
 
-                    // Tính lại khoảng cách cho toàn bộ địa điểm và sắp xếp theo gần nhất
                     if (allLocations.length > 0) {
-                        allLocations.sort((a, b) => {
-                            const distA = tinhKhoangCachKm(userCoords.lat, userCoords.lng, parseFloat(a.vi_do), parseFloat(a.kinh_do));
-                            const distB = tinhKhoangCachKm(userCoords.lat, userCoords.lng, parseFloat(b.vi_do), parseFloat(b.kinh_do));
-                            return distA - distB;
-                        });
-                        renderMarkers(allLocations);
                         capNhatDanhSachCards(allLocations);
                     }
                 },
-                function (error) {
-                    btnLocate.innerHTML = '<i class="bi bi-crosshair me-1"></i> Định vị vị trí của tôi';
+                function (err) {
+                    btnLocate.innerHTML = '<i class="bi bi-crosshair me-1 text-primary"></i> Gần vị trí của tôi';
                     btnLocate.disabled = false;
-                    alert('Không thể lấy vị trí hiện tại: ' + error.message);
+                    alert('Không thể xác định vị trí của bạn: ' + err.message);
                 },
                 { enableHighAccuracy: true, timeout: 8000 }
             );
         });
     }
 
-    // 11. Bản đồ chi tiết địa điểm đơn lẻ
-    const detailMapEl = document.getElementById('detail-map');
-    if (detailMapEl) {
-        const lat = parseFloat(detailMapEl.dataset.lat);
-        const lng = parseFloat(detailMapEl.dataset.lng);
-        const title = detailMapEl.dataset.title;
-
-        if (!isNaN(lat) && !isNaN(lng)) {
-            const detailMap = L.map('detail-map', {
-                scrollWheelZoom: false
-            }).setView([lat, lng], 15);
-
-            taoTileLayer().addTo(detailMap);
-
-            setTimeout(() => {
-                detailMap.invalidateSize();
-            }, 200);
-
-            const detailIcon = L.divIcon({
-                className: 'custom-leaflet-marker-wrapper',
-                html: '<div class="custom-marker marker-travel"><i class="bi bi-geo-alt-fill fs-6"></i></div>',
-                iconSize: [36, 36],
-                iconAnchor: [18, 18],
-                popupAnchor: [0, -20]
-            });
-
-            L.marker([lat, lng], { icon: detailIcon }).addTo(detailMap)
-                .bindPopup(`<strong>${title}</strong>`)
-                .openPopup();
-        }
-    }
-
-    // Helper: Tính khoảng cách theo công thức Haversine
-    function tinhKhoangCachKm(lat1, lon1, lat2, lon2) {
-        const R = 6371; // Bán kính Trái Đất theo km
-        const dLat = deg2rad(lat2 - lat1);
-        const dLon = deg2rad(lon2 - lon1);
-        const a = 
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
-
-    function deg2rad(deg) {
-        return deg * (Math.PI / 180);
-    }
-
-    // 12. Gắn sự kiện chuyển đổi chế độ xem (Split / Grid / Map)
+    // 14. Chuyển đổi chế độ xem (Split / Grid / Map)
     function ganSuKienCheDoXem() {
         const btnSplit = document.getElementById('btn-view-split');
         const btnGrid = document.getElementById('btn-view-grid');
@@ -616,13 +666,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btnFit && map) {
             btnFit.addEventListener('click', function () {
                 if (allLocations.length > 0) {
-                    const bounds = [];
-                    allLocations.forEach(item => {
-                        const lat = parseFloat(item.vi_do);
-                        const lng = parseFloat(item.kinh_do);
-                        if (!isNaN(lat) && !isNaN(lng)) bounds.push([lat, lng]);
-                    });
-                    if (bounds.length > 0) map.fitBounds(bounds, { padding: [40, 40] });
+                    fitMapToBounds(allLocations);
                 }
             });
         }
@@ -639,38 +683,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // 13. Gắn sự kiện Quick Filter Chips
-    function ganSuKienQuickChips() {
-        const chips = document.querySelectorAll('[data-filter-chip]');
-        const filterForm = document.getElementById('live-filter-form');
-        if (!chips.length || !filterForm) return;
-
-        chips.forEach(chip => {
-            chip.addEventListener('click', function () {
-                const type = chip.getAttribute('data-filter-chip');
-                chips.forEach(c => c.classList.remove('active'));
-                chip.classList.add('active');
-
-                if (type === 'all') {
-                    if (filterForm.elements['loai']) filterForm.elements['loai'].value = '';
-                    if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = false;
-                } else if (type === 'du_lich') {
-                    if (filterForm.elements['loai']) filterForm.elements['loai'].value = 'du_lich';
-                    if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = false;
-                } else if (type === 'am_thuc') {
-                    if (filterForm.elements['loai']) filterForm.elements['loai'].value = 'am_thuc';
-                    if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = false;
-                } else if (type === 'co_ban_ve') {
-                    if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = true;
-                }
-
-                locDanhMucTheoLoai();
-                filterForm.dispatchEvent(new Event('submit'));
-            });
-        });
-    }
-
-    // 14. Gắn sự kiện sắp xếp Client-side
+    // 15. Gắn sự kiện sắp xếp Client-side
     function ganSuKienSapXep() {
         const sortSelect = document.getElementById('sort-selector');
         if (!sortSelect) return;
@@ -692,5 +705,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
             capNhatDanhSachCards(sorted);
         });
+    }
+
+    // 16. Bản đồ chi tiết địa điểm đơn lẻ
+    const detailMapEl = document.getElementById('detail-map');
+    if (detailMapEl) {
+        const lat = parseFloat(detailMapEl.dataset.lat);
+        const lng = parseFloat(detailMapEl.dataset.lng);
+        const title = detailMapEl.dataset.title;
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+            const detailMap = L.map('detail-map', {
+                scrollWheelZoom: false
+            }).setView([lat, lng], 15);
+
+            taoTileLayer().addTo(detailMap);
+
+            setTimeout(() => {
+                detailMap.invalidateSize();
+            }, 200);
+
+            const detailIcon = L.divIcon({
+                className: 'custom-leaflet-marker-wrapper',
+                html: '<div class="custom-marker marker-travel"><i class="bi bi-geo-alt-fill"></i></div>',
+                iconSize: [36, 36],
+                iconAnchor: [18, 36],
+                popupAnchor: [0, -36]
+            });
+
+            L.marker([lat, lng], { icon: detailIcon }).addTo(detailMap)
+                .bindPopup(`<strong>${title}</strong>`)
+                .openPopup();
+        }
     }
 });

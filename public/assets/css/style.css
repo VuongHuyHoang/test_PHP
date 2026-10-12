@@ -91,40 +91,60 @@ body {
 }
 
 /* Custom Leaflet Markers */
+.custom-leaflet-marker-wrapper {
+    background: transparent !important;
+    border: none !important;
+}
+
 .custom-marker {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 36px;
     height: 36px;
-    border-radius: 50%;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
     color: #ffffff;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     border: 2px solid #ffffff;
-    transition: transform 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+}
+
+.custom-marker i {
+    transform: rotate(45deg);
+    font-size: 15px;
+    display: inline-block;
 }
 
 .custom-marker:hover, .custom-marker.active-marker {
-    transform: scale(1.2);
+    transform: rotate(-45deg) scale(1.25);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
     z-index: 9999 !important;
 }
 
 .marker-food {
-    background-color: var(--warm-coral);
+    background: linear-gradient(135deg, #f97316 0%, #d95338 100%) !important;
 }
 
 .marker-travel {
-    background-color: var(--coastal-teal);
+    background: linear-gradient(135deg, #0ea5e9 0%, #137a8e 100%) !important;
 }
 
 .marker-user {
-    background-color: #2563eb;
+    background: #2563eb !important;
+    border-radius: 50% !important;
+    transform: none !important;
     animation: userPulse 2s infinite;
+}
+
+.marker-user i {
+    transform: none !important;
 }
 
 @keyframes userPulse {
     0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.6); }
-    70% { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+    70% { box-shadow: 0 0 0 14px rgba(37, 99, 235, 0); }
     100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
 }
 

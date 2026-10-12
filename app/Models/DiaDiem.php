@@ -79,7 +79,7 @@ class DiaDiem
     {
         $sql = "
             SELECT d.id, d.ten_dia_diem, d.duong_dan, d.dia_chi, d.vi_do, d.kinh_do,
-                   d.gia_thap_nhat, d.gia_cao_nhat, d.anh_dai_dien, d.co_ban_ve,
+                   d.gia_thap_nhat, d.gia_cao_nhat, d.anh_dai_dien, d.co_ban_ve, d.luot_xem,
                    dm.ten_danh_muc, dm.loai_danh_muc,
                    COALESCE(AVG(dg.so_sao), 0) as diem_danh_gia,
                    COUNT(dg.id) as tong_danh_gia
