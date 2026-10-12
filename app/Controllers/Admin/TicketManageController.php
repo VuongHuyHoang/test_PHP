@@ -151,3 +151,4 @@ class TicketManageController
         redirect(url('admin/tickets'));
     }
 }
+

@@ -62,3 +62,4 @@ class MailHelper
         return true;
     }
 }
+

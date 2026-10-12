@@ -13,16 +13,16 @@
                 </div>
 
                 <div class="p-4 p-md-5">
-                    <?php 
-                        $bankId = $_ENV['BANK_ID'] ?? 'MB';
-                        $bankAccountNo = $_ENV['BANK_ACCOUNT_NO'] ?? '0901234567';
-                        $bankAccountName = $_ENV['BANK_ACCOUNT_NAME'] ?? 'NHA TRANG TOURISM';
-                        $soTien = (float)$donHang['tong_tien'];
-                        $maDon = $donHang['ma_don_hang'];
-                        $phuongThuc = $donHang['phuong_thuc_thanh_toan'];
+                    <?php
+                    $bankId = $_ENV['BANK_ID'] ?? 'MB';
+                    $bankAccountNo = $_ENV['BANK_ACCOUNT_NO'] ?? '0901234567';
+                    $bankAccountName = $_ENV['BANK_ACCOUNT_NAME'] ?? 'NHA TRANG TOURISM';
+                    $soTien = (float)$donHang['tong_tien'];
+                    $maDon = $donHang['ma_don_hang'];
+                    $phuongThuc = $donHang['phuong_thuc_thanh_toan'];
 
-                        // Đường dẫn VietQR động chuẩn Napas
-                        $vietQrUrl = "https://img.vietqr.io/image/{$bankId}-{$bankAccountNo}-compact2.jpg?amount={$soTien}&addInfo=" . urlencode($maDon) . "&accountName=" . urlencode($bankAccountName);
+                    // Đường dẫn VietQR động chuẩn Napas
+                    $vietQrUrl = "https://img.vietqr.io/image/{$bankId}-{$bankAccountNo}-compact2.jpg?amount={$soTien}&addInfo=" . urlencode($maDon) . "&accountName=" . urlencode($bankAccountName);
                     ?>
 
                     <div class="row g-4 align-items-center mb-4">
@@ -39,7 +39,7 @@
                         <!-- Cột Thông Tin Chuyển Khoản -->
                         <div class="col-md-7">
                             <h5 class="fw-bold text-dark mb-3">Thông Tin Chuyển Khoản</h5>
-                            
+
                             <div class="bg-light p-3 rounded-3 border d-flex flex-column gap-2 small">
                                 <div class="d-flex justify-content-between">
                                     <span class="text-muted">Ngân hàng thụ hưởng:</span>
@@ -102,18 +102,18 @@
 </main>
 
 <script>
-function copyText(elementId, btn) {
-    const text = document.getElementById(elementId).innerText;
-    navigator.clipboard.writeText(text).then(() => {
-        const originalText = btn.innerText;
-        btn.innerText = 'Đã chép!';
-        btn.classList.replace('btn-outline-secondary', 'btn-success');
-        setTimeout(() => {
-            btn.innerText = originalText;
-            btn.classList.replace('btn-success', 'btn-outline-secondary');
-        }, 2000);
-    });
-}
+    function copyText(elementId, btn) {
+        const text = document.getElementById(elementId).innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            const originalText = btn.innerText;
+            btn.innerText = 'Đã chép!';
+            btn.classList.replace('btn-outline-secondary', 'btn-success');
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.classList.replace('btn-success', 'btn-outline-secondary');
+            }, 2000);
+        });
+    }
 </script>
 
 <?php require_once dirname(__DIR__, 2) . '/layouts/footer.php'; ?>

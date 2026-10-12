@@ -327,3 +327,4 @@ class LocationManageController
         return trim($text, '-');
     }
 }
+

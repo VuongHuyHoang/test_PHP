@@ -9,6 +9,7 @@ use App\Controllers\HomeController;
 use App\Controllers\LocationController;
 use App\Controllers\AuthController;
 use App\Controllers\BookingController;
+use App\Controllers\ProfileController;
 use App\Controllers\Admin\DashboardController;
 use App\Controllers\Admin\OrderManageController;
 use App\Controllers\Admin\LocationManageController;
@@ -40,6 +41,13 @@ Router::post('/booking/submit', [BookingController::class, 'submitBooking']);
 Router::get('/booking/payment/{code}', [BookingController::class, 'showPayment']);
 Router::post('/booking/confirm-payment', [BookingController::class, 'confirmPayment']);
 Router::get('/voucher/{code}', [BookingController::class, 'showVoucher']);
+
+// ==========================================
+// 4. ROUTE HỒ SƠ KHÁCH HÀNG & VÉ ĐÃ ĐẶT
+// ==========================================
+Router::get('/profile', [ProfileController::class, 'index']);
+Router::post('/profile/update', [ProfileController::class, 'updateProfile']);
+Router::post('/profile/change-password', [ProfileController::class, 'changePassword']);
 
 // ==========================================
 // 4. ROUTE ADMIN PORTAL

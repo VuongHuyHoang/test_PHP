@@ -59,3 +59,4 @@ class QrHelper
         return $qrUrl;
     }
 }
+

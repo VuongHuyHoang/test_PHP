@@ -34,11 +34,13 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                             <li><h6 class="dropdown-header"><?= htmlspecialchars($_SESSION['user_email']) ?></h6></li>
+                            <li><a class="dropdown-item fw-semibold" href="<?= url('profile') ?>"><i class="bi bi-ticket-perforated me-2 text-primary"></i>Vé của tôi & Hồ sơ</a></li>
                             <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger fw-semibold" href="<?= url('admin/dashboard') ?>"><i class="bi bi-speedometer2 me-2"></i>Trang quản trị Admin</a></li>
                                 <li><a class="dropdown-item" href="<?= url('admin/orders') ?>"><i class="bi bi-qr-code-scan me-2"></i>Tra cứu & Soát vé</a></li>
-                                <li><hr class="dropdown-divider"></li>
                             <?php endif; ?>
+                            <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="<?= url('logout') ?>"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
                         </ul>
                     </div>

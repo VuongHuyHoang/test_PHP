@@ -46,5 +46,33 @@ class NguoiDung
         ]);
         return (int)$this->db->lastInsertId();
     }
+
+    public function capNhatThongTin(int $id, string $hoTen, ?string $sdt): bool
+    {
+        $stmt = $this->db->prepare("UPDATE nguoi_dung SET ho_ten = :ho_ten, so_dien_thoai = :sdt WHERE id = :id");
+        return $stmt->execute([
+            'id'     => $id,
+            'ho_ten' => $hoTen,
+            'sdt'    => $sdt
+        ]);
+    }
+
+    public function layMatKhau(int $id): ?string
+    {
+        $stmt = $this->db->prepare("SELECT mat_khau FROM nguoi_dung WHERE id = :id LIMIT 1");
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch();
+        return $row ? $row['mat_khau'] : null;
+    }
+
+    public function doiMatKhau(int $id, string $matKhauMoi): bool
+    {
+        $hash = password_hash($matKhauMoi, PASSWORD_BCRYPT);
+        $stmt = $this->db->prepare("UPDATE nguoi_dung SET mat_khau = :mat_khau WHERE id = :id");
+        return $stmt->execute([
+            'id'       => $id,
+            'mat_khau' => $hash
+        ]);
+    }
 }
 

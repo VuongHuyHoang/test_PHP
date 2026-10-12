@@ -52,5 +52,67 @@ class DonHang
         $stmt->execute(['nguoi_dung_id' => $nguoiDungId]);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Lấy danh sách đơn vé của người dùng kèm tóm tắt địa điểm & ngày tham quan
+     */
+    public function theoNguoiDungKemChiTiet(int $nguoiDungId): array
+    {
+        $sql = "
+            SELECT dh.*,
+                   (SELECT dd.ten_dia_diem 
+                    FROM chi_tiet_don_hang ct 
+                    JOIN ton_kho_ve tk ON ct.ton_kho_ve_id = tk.id 
+                    JOIN goi_ve gv ON tk.goi_ve_id = gv.id 
+                    JOIN dia_diem dd ON gv.dia_diem_id = dd.id 
+                    WHERE ct.don_hang_id = dh.id LIMIT 1) as ten_dia_diem,
+                   (SELECT dd.anh_dai_dien 
+                    FROM chi_tiet_don_hang ct 
+                    JOIN ton_kho_ve tk ON ct.ton_kho_ve_id = tk.id 
+                    JOIN goi_ve gv ON tk.goi_ve_id = gv.id 
+                    JOIN dia_diem dd ON gv.dia_diem_id = dd.id 
+                    WHERE ct.don_hang_id = dh.id LIMIT 1) as anh_dia_diem,
+                   (SELECT dd.duong_dan 
+                    FROM chi_tiet_don_hang ct 
+                    JOIN ton_kho_ve tk ON ct.ton_kho_ve_id = tk.id 
+                    JOIN goi_ve gv ON tk.goi_ve_id = gv.id 
+                    JOIN dia_diem dd ON gv.dia_diem_id = dd.id 
+                    WHERE ct.don_hang_id = dh.id LIMIT 1) as dia_diem_slug,
+                   (SELECT gv.ten_goi_ve 
+                    FROM chi_tiet_don_hang ct 
+                    JOIN ton_kho_ve tk ON ct.ton_kho_ve_id = tk.id 
+                    JOIN goi_ve gv ON tk.goi_ve_id = gv.id 
+                    WHERE ct.don_hang_id = dh.id LIMIT 1) as ten_goi_ve,
+                   (SELECT ct.ngay_tham_quan 
+                    FROM chi_tiet_don_hang ct 
+                    WHERE ct.don_hang_id = dh.id LIMIT 1) as ngay_tham_quan,
+                   (SELECT SUM(ct.so_luong_nguoi_lon + ct.so_luong_tre_em) 
+                    FROM chi_tiet_don_hang ct 
+                    WHERE ct.don_hang_id = dh.id) as tong_so_ve
+            FROM don_hang dh
+            WHERE dh.nguoi_dung_id = :uid AND dh.ngay_xoa IS NULL
+            ORDER BY dh.id DESC
+        ";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['uid' => $nguoiDungId]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Lấy lịch sử giao dịch thanh toán của người dùng
+     */
+    public function layGiaoDichNguoiDung(int $nguoiDungId): array
+    {
+        $sql = "
+            SELECT gd.*, dh.ma_don_hang, dh.tong_tien as tong_tien_don
+            FROM giao_dich_thanh_toan gd
+            JOIN don_hang dh ON gd.don_hang_id = dh.id
+            WHERE dh.nguoi_dung_id = :uid AND dh.ngay_xoa IS NULL
+            ORDER BY gd.id DESC
+        ";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['uid' => $nguoiDungId]);
+        return $stmt->fetchAll();
+    }
 }
 

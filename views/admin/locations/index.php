@@ -83,10 +83,10 @@
                     <?php foreach ($locations as $loc): ?>
                         <tr>
                             <td>
-                                <img src="<?= str_starts_with($loc['anh_dai_dien'], 'http') ? $loc['anh_dai_dien'] : url($loc['anh_dai_dien']) ?>" 
-                                     alt="<?= htmlspecialchars($loc['ten_dia_diem']) ?>" 
-                                     class="rounded-3 shadow-sm object-fit-cover" 
-                                     style="width: 55px; height: 55px;">
+                                <img src="<?= str_starts_with($loc['anh_dai_dien'], 'http') ? $loc['anh_dai_dien'] : url($loc['anh_dai_dien']) ?>"
+                                    alt="<?= htmlspecialchars($loc['ten_dia_diem']) ?>"
+                                    class="rounded-3 shadow-sm object-fit-cover"
+                                    style="width: 55px; height: 55px;">
                             </td>
                             <td>
                                 <strong class="text-dark fs-6"><?= htmlspecialchars($loc['ten_dia_diem']) ?></strong><br>
