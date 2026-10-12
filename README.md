@@ -47,8 +47,10 @@ nhatrang-tourism-web/
 │   │   ├── AuthController.php
 │   │   ├── BookingController.php
 │   │   └── Admin/
-│   │       ├── DashboardController.php
-│   │       └── OrderManageController.php
+│   │       ├── DashboardController.php      # Thống kê Chart.js
+│   │       ├── LocationManageController.php # CRUD địa điểm & gallery
+│   │       ├── TicketManageController.php   # Quản lý gói vé & tồn kho
+│   │       └── OrderManageController.php    # Soát vé lễ tân quầy
 │   ├── Models/
 │   │   ├── NguoiDung.php
 │   │   ├── DanhMuc.php
@@ -62,7 +64,9 @@ nhatrang-tourism-web/
 │   ├── Services/
 │   │   └── BookingService.php  # Atomic Update & Transaction đặt vé
 │   └── Helpers/
-│       └── FormatHelper.php
+│       ├── FormatHelper.php
+│       ├── QrHelper.php        # Sinh & lưu mã QR E-Voucher cục bộ
+│       └── MailHelper.php      # Gửi & ghi log email xác nhận
 └── views/
     ├── layouts/
     │   ├── header.php, navbar.php, footer.php
@@ -72,9 +76,11 @@ nhatrang-tourism-web/
     │   ├── home/index.php
     │   ├── locations/index.php, detail.php
     │   ├── auth/login.php, register.php
-    │   └── booking/form.php, voucher.php
+    │   └── booking/form.php, payment.php, voucher.php
     └── admin/
-        ├── dashboard/index.php
+        ├── dashboard/index.php # Chart.js charts
+        ├── locations/index.php, form.php
+        ├── tickets/index.php
         └── orders/index.php    # Soát vé tại quầy
 ```
 
