@@ -79,3 +79,4 @@ class OrderManageController
         redirect(url('admin/orders'));
     }
 }
+

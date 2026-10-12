@@ -18,6 +18,7 @@ use App\Controllers\Admin\OrderManageController;
 Router::get('/', [HomeController::class, 'index']);
 Router::get('/locations', [LocationController::class, 'index']);
 Router::get('/dia-diem/{slug}', [LocationController::class, 'detail']);
+Router::post('/dia-diem/danh-gia', [LocationController::class, 'submitReview']);
 Router::get('/api/locations', [LocationController::class, 'apiLocations']);
 
 // ==========================================
@@ -45,3 +46,4 @@ Router::post('/admin/orders/update-status', [OrderManageController::class, 'upda
 
 // Điều phối yêu cầu HTTP
 Router::dispatch();
+

@@ -1,71 +1,295 @@
+:root {
+    --coastal-deep: #0b2545;
+    --coastal-teal: #137a8e;
+    --coastal-teal-hover: #0e6070;
+    --warm-coral: #d95338;
+    --warm-coral-hover: #be432a;
+    --sand-bg: #f8f6f0;
+    --card-bg: #ffffff;
+    --border-sand: #e5e0d4;
+    --text-main: #1a2233;
+    --text-muted: #64748b;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-full: 9999px;
+}
+
 body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: #f8fafc;
-    color: #1e293b;
+    background-color: var(--sand-bg);
+    color: var(--text-main);
+    line-height: 1.6;
+    letter-spacing: -0.01em;
 }
 
-.hero-banner {
-    background: linear-gradient(135deg, rgba(14, 116, 144, 0.9) 0%, rgba(2, 132, 199, 0.8) 100%), 
-                url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
-    color: white;
-    padding: 80px 0;
+/* Navbar */
+.site-navbar {
+    background-color: var(--coastal-deep);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.hero-title {
-    font-size: 2.75rem;
+.brand-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+}
+
+.nav-link-custom {
+    color: rgba(255, 255, 255, 0.78);
+    font-weight: 500;
+    font-size: 0.935rem;
+    transition: color 0.2s ease;
+}
+
+.nav-link-custom:hover, .nav-link-custom.active {
+    color: #ffffff;
+}
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(180deg, var(--coastal-deep) 0%, #10375c 100%);
+    color: #ffffff;
+    padding: 72px 0 54px 0;
+}
+
+.hero-heading {
+    font-size: clamp(2rem, 4vw, 2.85rem);
     font-weight: 800;
-    line-height: 1.2;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    max-width: 760px;
+    margin: 0 auto 16px auto;
+}
+
+.hero-subtitle {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.82);
+    max-width: 620px;
+    margin: 0 auto 32px auto;
+}
+
+/* Interactive Map Container */
+.map-frame {
+    background: var(--card-bg);
+    border: 1px solid var(--border-sand);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(11, 37, 69, 0.06);
 }
 
 #map {
-    height: 480px;
+    height: 520px;
     width: 100%;
-    border-radius: 16px;
-    z-index: 10;
+    z-index: 5;
 }
 
 #detail-map {
-    height: 320px;
+    height: 340px;
     width: 100%;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
 }
 
-.location-card {
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-    border: none;
-    border-radius: 16px;
+/* Custom Leaflet Markers */
+.custom-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    border: 2px solid #ffffff;
+    transition: transform 0.2s ease;
+}
+
+.custom-marker:hover, .custom-marker.active-marker {
+    transform: scale(1.2);
+    z-index: 9999 !important;
+}
+
+.marker-food {
+    background-color: var(--warm-coral);
+}
+
+.marker-travel {
+    background-color: var(--coastal-teal);
+}
+
+.marker-user {
+    background-color: #2563eb;
+    animation: userPulse 2s infinite;
+}
+
+@keyframes userPulse {
+    0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.6); }
+    70% { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+
+/* Leaflet Popup Styling */
+.leaflet-popup-content-wrapper {
+    border-radius: var(--radius-md) !important;
+    padding: 0 !important;
     overflow: hidden;
+    box-shadow: 0 10px 25px rgba(11, 37, 69, 0.15) !important;
 }
 
-.location-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important;
+.leaflet-popup-content {
+    margin: 0 !important;
+    line-height: 1.4 !important;
 }
 
-.location-card .card-img-top {
-    height: 200px;
-    object-fit: cover;
+.popup-card {
+    min-width: 220px;
+    max-width: 250px;
 }
 
-.badge-am-thuc {
-    background-color: #f97316;
-    color: white;
-}
-
-.badge-du-lich {
-    background-color: #0284c7;
-    color: white;
-}
-
-.custom-popup .leaflet-popup-content-wrapper {
-    border-radius: 12px;
-    padding: 4px;
-}
-
-.custom-popup img {
-    border-radius: 8px;
+.popup-img {
     width: 100%;
-    height: 100px;
+    height: 110px;
     object-fit: cover;
-    margin-bottom: 6px;
+}
+
+.popup-body {
+    padding: 12px;
+}
+
+/* Location Cards */
+.location-item-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-sand);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.location-item-card:hover, .location-item-card.highlighted-card {
+    border-color: var(--coastal-teal);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(11, 37, 69, 0.08);
+}
+
+.location-thumb {
+    height: 190px;
+    object-fit: cover;
+    width: 100%;
+}
+
+.badge-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+}
+
+.badge-tag-food {
+    background-color: #fef2f0;
+    color: var(--warm-coral);
+    border: 1px solid rgba(217, 83, 56, 0.2);
+}
+
+.badge-tag-travel {
+    background-color: #f0f9fa;
+    color: var(--coastal-teal);
+    border: 1px solid rgba(19, 122, 142, 0.2);
+}
+
+/* Buttons */
+.btn-coastal {
+    background-color: var(--coastal-teal);
+    color: #ffffff;
+    font-weight: 600;
+    border: none;
+    transition: background-color 0.2s ease;
+}
+
+.btn-coastal:hover {
+    background-color: var(--coastal-teal-hover);
+    color: #ffffff;
+}
+
+.btn-coral {
+    background-color: var(--warm-coral);
+    color: #ffffff;
+    font-weight: 600;
+    border: none;
+    transition: background-color 0.2s ease;
+}
+
+.btn-coral:hover {
+    background-color: var(--warm-coral-hover);
+    color: #ffffff;
+}
+
+/* Filter Bar */
+.filter-panel {
+    background: var(--card-bg);
+    border: 1px solid var(--border-sand);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-main);
+    background-color: var(--sand-bg);
+    border: 1px solid var(--border-sand);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    text-decoration: none;
+}
+
+.filter-chip:hover, .filter-chip.active {
+    background-color: var(--coastal-deep);
+    color: #ffffff;
+    border-color: var(--coastal-deep);
+}
+
+/* Distance Indicator */
+.distance-pill {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--coastal-teal);
+    background: #e8f5f7;
+    padding: 3px 8px;
+    border-radius: var(--radius-full);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Review Star Picker */
+.star-rating-select {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    gap: 4px;
+}
+
+.star-rating-select input {
+    display: none;
+}
+
+.star-rating-select label {
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: #cbd5e1;
+    transition: color 0.15s ease;
+}
+
+.star-rating-select label:hover,
+.star-rating-select label:hover ~ label,
+.star-rating-select input:checked ~ label {
+    color: #f59e0b;
 }

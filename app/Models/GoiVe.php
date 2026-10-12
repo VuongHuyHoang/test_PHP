@@ -33,3 +33,4 @@ class GoiVe
         return $row ?: null;
     }
 }
+

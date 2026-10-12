@@ -48,3 +48,4 @@ try {
     echo "Gợi ý: Hãy đảm bảo MySQL / XAMPP Control Panel đã bật dịch vụ MySQL.\n";
     exit(1);
 }
+

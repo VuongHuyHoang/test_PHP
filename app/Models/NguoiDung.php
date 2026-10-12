@@ -47,3 +47,4 @@ class NguoiDung
         return (int)$this->db->lastInsertId();
     }
 }
+

@@ -94,3 +94,4 @@ if (!function_exists('flash')) {
         return $val;
     }
 }
+

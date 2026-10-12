@@ -115,3 +115,4 @@ class AuthController
         redirect(url(''));
     }
 }
+

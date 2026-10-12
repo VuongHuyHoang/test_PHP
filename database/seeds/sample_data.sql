@@ -89,3 +89,4 @@ INSERT INTO `danh_gia` (`nguoi_dung_id`, `dia_diem_id`, `so_sao`, `noi_dung`, `t
 (2, 7, 4, 'Hải sản Bờ Kè tôm mực rất tươi, ngồi sát sông Cái đón gió lộng ăn ngon miệng.', 'da_duyet');
 
 SET FOREIGN_KEY_CHECKS = 1;
+

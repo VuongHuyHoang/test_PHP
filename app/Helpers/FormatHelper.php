@@ -58,3 +58,4 @@ class FormatHelper
         return $html;
     }
 }
+

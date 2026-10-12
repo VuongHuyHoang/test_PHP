@@ -88,3 +88,4 @@ class Router
         view('layouts.404', ['title' => 'Trang không tồn tại']);
     }
 }
+

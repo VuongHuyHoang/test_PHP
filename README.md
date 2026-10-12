@@ -121,3 +121,4 @@ Sau đó mở trình duyệt truy cập: [http://localhost:8000](http://localhos
 4. **Không xóa cứng (Soft Delete):** Đơn hàng chỉ cập nhật cột `ngay_xoa`. Khóa ngoại giao dịch là `RESTRICT`.
 5. **Server-side Auth:** Chặn quyền tại Controller/Middleware qua `AuthMiddleware`.
 6. **Mật khẩu an toàn:** Dùng `password_hash($pass, PASSWORD_BCRYPT)`.
+
