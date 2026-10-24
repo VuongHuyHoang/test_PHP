@@ -83,6 +83,11 @@ class DonHang
                     JOIN ton_kho_ve tk ON ct.ton_kho_ve_id = tk.id 
                     JOIN goi_ve gv ON tk.goi_ve_id = gv.id 
                     WHERE ct.don_hang_id = dh.id LIMIT 1) as ten_goi_ve,
+                   (SELECT gv.id 
+                    FROM chi_tiet_don_hang ct 
+                    JOIN ton_kho_ve tk ON ct.ton_kho_ve_id = tk.id 
+                    JOIN goi_ve gv ON tk.goi_ve_id = gv.id 
+                    WHERE ct.don_hang_id = dh.id LIMIT 1) as goi_ve_id,
                    (SELECT ct.ngay_tham_quan 
                     FROM chi_tiet_don_hang ct 
                     WHERE ct.don_hang_id = dh.id LIMIT 1) as ngay_tham_quan,
@@ -96,6 +101,79 @@ class DonHang
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['uid' => $nguoiDungId]);
         return $stmt->fetchAll();
+    }
+
+    /**
+     * Hủy đơn hàng và tự động hoàn trả số lượng vé vào tồn kho theo ngày
+     */
+    public function huyDonHang(int $donHangId, string $lyDo = 'Người dùng hủy đơn'): bool
+    {
+        try {
+            $this->db->beginTransaction();
+
+            // Kiểm tra trạng thái đơn hàng
+            $stmt = $this->db->prepare("
+                SELECT id, trang_thai_thanh_toan, trang_thai_don_hang 
+                FROM don_hang 
+                WHERE id = :id FOR UPDATE
+            ");
+            $stmt->execute(['id' => $donHangId]);
+            $order = $stmt->fetch();
+
+            if (!$order) {
+                $this->db->rollBack();
+                return false;
+            }
+
+            // Chỉ cho phép hủy đơn chưa thanh toán và chưa bị hủy
+            if ($order['trang_thai_don_hang'] === 'da_huy' || $order['trang_thai_thanh_toan'] === 'da_thanh_toan') {
+                $this->db->rollBack();
+                return false;
+            }
+
+            // Lấy danh sách chi tiết vé cần hoàn tồn kho
+            $stmtItems = $this->db->prepare("
+                SELECT ton_kho_ve_id, (so_luong_nguoi_lon + so_luong_tre_em) as tong_so_ve 
+                FROM chi_tiet_don_hang 
+                WHERE don_hang_id = :id
+            ");
+            $stmtItems->execute(['id' => $donHangId]);
+            $items = $stmtItems->fetchAll();
+
+            // Hoàn trả số lượng vé lại vào kho
+            $stmtRestore = $this->db->prepare("
+                UPDATE ton_kho_ve 
+                SET so_ve_con_lai = LEAST(tong_so_ve, so_ve_con_lai + :so_ve) 
+                WHERE id = :tk_id
+            ");
+            foreach ($items as $item) {
+                $stmtRestore->execute([
+                    'so_ve' => (int)$item['tong_so_ve'],
+                    'tk_id' => (int)$item['ton_kho_ve_id']
+                ]);
+            }
+
+            // Cập nhật trạng thái đơn hàng thành đã hủy
+            $stmtCancel = $this->db->prepare("
+                UPDATE don_hang 
+                SET trang_thai_don_hang = 'da_huy', 
+                    trang_thai_thanh_toan = 'that_bai', 
+                    ghi_chu = CONCAT(COALESCE(ghi_chu, ''), ' [Hủy: ', :ly_do, ' lúc ', NOW(), ']') 
+                WHERE id = :id
+            ");
+            $stmtCancel->execute([
+                'ly_do' => $lyDo,
+                'id'    => $donHangId
+            ]);
+
+            $this->db->commit();
+            return true;
+        } catch (\Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            return false;
+        }
     }
 
     /**

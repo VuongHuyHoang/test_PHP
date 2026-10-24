@@ -44,6 +44,13 @@ class BookingController
     {
         AuthMiddleware::checkCustomer();
 
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ. Vui lòng thử lại.');
+            $goiVeId = (int)($_POST['goi_ve_id'] ?? 0);
+            redirect(url('booking/' . $goiVeId));
+            return;
+        }
+
         $goiVeId = (int)($_POST['goi_ve_id'] ?? 0);
         $ngayThamQuan = trim($_POST['ngay_tham_quan'] ?? '');
         $slNguoiLon = (int)($_POST['so_luong_nguoi_lon'] ?? 0);
@@ -62,11 +69,12 @@ class BookingController
             redirect(url(''));
         }
 
-        // Tìm hoặc kiểm tra tồn kho theo ngày
-        $tonKho = $this->tonKhoModel->layTheoGoiVeVaNgay($goiVeId, $ngayThamQuan);
+        // Tìm hoặc tự động khởi tạo tồn kho theo ngày
+        $tonKho = $this->tonKhoModel->layHoacTaoTheoGoiVeVaNgay($goiVeId, $ngayThamQuan);
         if (!$tonKho) {
-            flash('error', 'Ngày được chọn hiện chưa mở bán vé hoặc đã đóng cổng đặt vé.');
+            flash('error', 'Ngày được chọn không hợp lệ hoặc đã qua thời hạn đặt vé.');
             redirect(url('booking/' . $goiVeId));
+            return;
         }
 
         $thongTinKhach = [
@@ -121,21 +129,48 @@ class BookingController
             die("Bạn không có quyền truy cập đơn hàng này.");
         }
 
+        // Nếu đã hủy, chuyển hướng về profile
+        if ($donHang['trang_thai_don_hang'] === 'da_huy') {
+            flash('warning', 'Đơn hàng ' . $maDonHang . ' đã bị hủy hoặc hết hạn thời gian giữ chỗ.');
+            redirect(url('profile'));
+            return;
+        }
+
         // Nếu đã thanh toán, chuyển hướng trực tiếp tới voucher
         if ($donHang['trang_thai_thanh_toan'] === 'da_thanh_toan') {
             redirect(url('voucher/' . $maDonHang));
             return;
         }
 
+        // Tính thời gian còn lại của thời hạn giữ chỗ 10 phút (600 giây)
+        $createdTimestamp = strtotime($donHang['ngay_tao']);
+        $elapsed = time() - $createdTimestamp;
+        $remainingSeconds = max(0, 600 - $elapsed);
+
+        // Tự động hủy nếu đã quá 10 phút
+        if ($remainingSeconds <= 0 && $donHang['trang_thai_thanh_toan'] === 'cho_thanh_toan') {
+            $this->donHangModel->huyDonHang((int)$donHang['id'], 'Hết hạn giữ chỗ 10 phút');
+            flash('error', 'Đơn hàng ' . $maDonHang . ' đã hết hạn thời gian giữ chỗ (10 phút) và đã được tự động hủy để giải phóng vé.');
+            redirect(url('profile'));
+            return;
+        }
+
         view('client.booking.payment', [
-            'title'   => 'Cổng Thanh Toán - ' . $maDonHang,
-            'donHang' => $donHang,
+            'title'            => 'Cổng Thanh Toán - ' . $maDonHang,
+            'donHang'          => $donHang,
+            'remainingSeconds' => $remainingSeconds,
         ]);
     }
 
     public function confirmPayment(): void
     {
         AuthMiddleware::checkCustomer();
+
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ. Vui lòng thử lại.');
+            redirect(url(''));
+            return;
+        }
 
         $maDonHang = trim($_POST['ma_don_hang'] ?? '');
         if (empty($maDonHang)) {
@@ -209,6 +244,121 @@ class BookingController
         }
     }
 
+    /**
+     * API Giả lập quét mã VietQR chuyển tiền thành công (Demo Sandbox cho Học tập/Đồ án)
+     */
+    public function simulatePayment(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        AuthMiddleware::checkCustomer();
+
+        if (!validate_csrf()) {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang và thử lại.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $maDonHang = trim($_POST['ma_don_hang'] ?? '');
+        if (empty($maDonHang)) {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Mã đơn hàng không hợp lệ.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $donHang = $this->donHangModel->timTheoMa($maDonHang);
+        if (!$donHang) {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Không tìm thấy đơn hàng trong hệ thống.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($donHang['nguoi_dung_id'] != $_SESSION['user_id'] && ($_SESSION['user_role'] ?? '') !== 'admin') {
+            http_response_code(403);
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Bạn không có quyền cập nhật đơn hàng này.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Nếu đã thanh toán rồi thì trả về success ngay
+        if ($donHang['trang_thai_thanh_toan'] === 'da_thanh_toan') {
+            echo json_encode([
+                'status'      => 'success',
+                'message'     => 'Đơn hàng này đã được thanh toán thành công trước đó.',
+                'voucher_url' => url('voucher/' . $maDonHang)
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        try {
+            $db = \App\Config\Database::getConnection();
+            $db->beginTransaction();
+
+            // 1. Cập nhật trạng thái đơn hàng
+            $stmt = $db->prepare("
+                UPDATE don_hang 
+                SET trang_thai_thanh_toan = 'da_thanh_toan', 
+                    trang_thai_don_hang = 'da_xac_nhan' 
+                WHERE id = :id
+            ");
+            $stmt->execute(['id' => $donHang['id']]);
+
+            // 2. Thêm bản ghi giao dịch mô phỏng Sandbox
+            $maGiaoDich = 'SIM_NAPAS_' . date('YmdHis') . rand(100, 999);
+            $stmtGiaoDich = $db->prepare("
+                INSERT INTO giao_dich_thanh_toan 
+                (don_hang_id, cong_thanh_toan, ma_giao_dich, so_tien, loai_tien_te, du_lieu_phan_hoi, trang_thai) 
+                VALUES 
+                (:don_hang_id, 'vietqr_sandbox', :ma_gd, :so_tien, 'VND', :phan_hoi, 'thanh_cong')
+            ");
+            $stmtGiaoDich->execute([
+                'don_hang_id' => $donHang['id'],
+                'ma_gd'       => $maGiaoDich,
+                'so_tien'     => $donHang['tong_tien'],
+                'phan_hoi'    => json_encode([
+                    'hinh_thuc'       => 'VietQR Sandbox Simulator (Chế Độ Học Tập)',
+                    'ma_giao_dich'    => $maGiaoDich,
+                    'thoi_gian'       => date('Y-m-d H:i:s'),
+                    'nguoi_thuc_hien' => $_SESSION['user_name'] ?? 'Khách hàng'
+                ], JSON_UNESCAPED_UNICODE)
+            ]);
+
+            $db->commit();
+
+            // 3. Sinh mã QR E-Voucher
+            \App\Helpers\QrHelper::taoQrDonHang($maDonHang);
+
+            // 4. Gửi email xác nhận kèm chi tiết vé
+            $chiTiet = $this->donHangModel->chiTiet((int)$donHang['id']);
+            \App\Helpers\MailHelper::guiEmailXacNhan($donHang, $chiTiet);
+
+            flash('success', 'Thanh toán thành công! E-Voucher của bạn đã được kích hoạt.');
+
+            echo json_encode([
+                'status'      => 'success',
+                'message'     => 'Xác nhận thanh toán mô phỏng thành công!',
+                'voucher_url' => url('voucher/' . $maDonHang)
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        } catch (\Exception $e) {
+            if (isset($db) && $db->inTransaction()) {
+                $db->rollBack();
+            }
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Lỗi khi xử lý giao dịch: ' . $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+    }
+
     public function showVoucher(string $maDonHang): void
     {
         AuthMiddleware::checkCustomer();
@@ -233,6 +383,92 @@ class BookingController
             'donHang' => $donHang,
             'chiTiet' => $chiTiet,
         ]);
+    }
+
+    /**
+     * Hủy đơn hàng chủ động bởi người dùng
+     */
+    public function cancelBooking(): void
+    {
+        AuthMiddleware::checkCustomer();
+
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ.');
+            redirect(url('profile'));
+            return;
+        }
+
+        $maDonHang = trim($_POST['ma_don_hang'] ?? '');
+        $donHang = $this->donHangModel->timTheoMa($maDonHang);
+
+        if (!$donHang) {
+            flash('error', 'Không tìm thấy đơn hàng cần hủy.');
+            redirect(url('profile'));
+            return;
+        }
+
+        if ($donHang['nguoi_dung_id'] != $_SESSION['user_id'] && ($_SESSION['user_role'] ?? '') !== 'admin') {
+            http_response_code(403);
+            die("Bạn không có quyền hủy đơn hàng này.");
+        }
+
+        if ($donHang['trang_thai_thanh_toan'] === 'da_thanh_toan') {
+            flash('error', 'Đơn hàng đã thanh toán thành công, không thể hủy trực tiếp tại đây.');
+            redirect(url('profile'));
+            return;
+        }
+
+        $lyDo = trim($_POST['ly_do'] ?? 'Người dùng chủ động hủy');
+        $success = $this->donHangModel->huyDonHang((int)$donHang['id'], $lyDo);
+
+        if ($success) {
+            flash('success', 'Đã hủy đơn hàng ' . $maDonHang . ' thành công. Số lượng vé giữ chỗ đã được giải phóng.');
+        } else {
+            flash('error', 'Không thể hủy đơn hàng vào lúc này.');
+        }
+
+        redirect(url('profile'));
+    }
+
+    /**
+     * API kiểm tra trạng thái đơn hàng & thời gian giữ chỗ theo thời gian thực (Polling)
+     */
+    public function checkOrderStatus(string $maDonHang): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $donHang = $this->donHangModel->timTheoMa($maDonHang);
+        if (!$donHang) {
+            echo json_encode(['status' => 'error', 'message' => 'Không tìm thấy đơn hàng']);
+            exit;
+        }
+
+        $createdTime = strtotime($donHang['ngay_tao']);
+        $elapsed = time() - $createdTime;
+        $remainingSeconds = max(0, 600 - $elapsed);
+
+        $isCancelled = ($donHang['trang_thai_don_hang'] === 'da_huy');
+        $isPaid = ($donHang['trang_thai_thanh_toan'] === 'da_thanh_toan');
+
+        // Tự động hủy nếu đã hết 10 phút
+        if ($remainingSeconds <= 0 && !$isPaid && !$isCancelled) {
+            $this->donHangModel->huyDonHang((int)$donHang['id'], 'Hết hạn giữ chỗ 10 phút');
+            $isCancelled = true;
+        }
+
+        $mins = floor($remainingSeconds / 60);
+        $secs = $remainingSeconds % 60;
+        $formattedTime = sprintf('%02d:%02d', $mins, $secs);
+
+        echo json_encode([
+            'status'            => 'success',
+            'ma_don_hang'       => $maDonHang,
+            'is_paid'           => $isPaid,
+            'is_cancelled'      => $isCancelled,
+            'remaining_seconds' => $remainingSeconds,
+            'formatted_time'    => $formattedTime
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 }
 

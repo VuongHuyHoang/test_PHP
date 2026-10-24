@@ -5,22 +5,32 @@ namespace App\Controllers;
 use App\Middlewares\AuthMiddleware;
 use App\Models\NguoiDung;
 use App\Models\DonHang;
+use App\Models\YeuThich;
 use Exception;
 
 class ProfileController
 {
     private NguoiDung $nguoiDungModel;
     private DonHang $donHangModel;
+    private YeuThich $yeuThichModel;
 
     public function __construct()
     {
         $this->nguoiDungModel = new NguoiDung();
         $this->donHangModel = new DonHang();
+        $this->yeuThichModel = new YeuThich();
     }
 
     public function index(): void
     {
         AuthMiddleware::checkCustomer();
+
+        // Nếu là Quản trị viên, tự động chuyển về Admin Portal (Ẩn chức năng Vé & Hồ sơ khách hàng)
+        if (($_SESSION['user_role'] ?? '') === 'admin') {
+            redirect(url('admin/dashboard'));
+            return;
+        }
+
         $userId = (int)$_SESSION['user_id'];
 
         $user = $this->nguoiDungModel->timTheoId($userId);
@@ -52,6 +62,17 @@ class ProfileController
             }
         }
 
+        // Lấy danh sách địa điểm yêu thích (Wishlist)
+        $favorites = $this->yeuThichModel->danhSachTheoNguoiDung($userId);
+
+        // Lấy danh sách đánh giá & địa điểm của người dùng
+        $danhGiaModel = new \App\Models\DanhGia();
+        $myReviews = $danhGiaModel->layTheoNguoiDung($userId);
+
+        // Lấy danh sách lịch trình tour AI đã lưu
+        $aiTourService = new \App\Services\AiTourService();
+        $savedTours = $aiTourService->getSavedItineraries($userId);
+
         $activeTab = $_GET['tab'] ?? 'tickets';
 
         view('client.profile.index', [
@@ -59,6 +80,9 @@ class ProfileController
             'user'                => $user,
             'orders'              => $orders,
             'transactions'        => $transactions,
+            'favorites'           => $favorites,
+            'myReviews'           => $myReviews,
+            'savedTours'          => $savedTours,
             'validTicketsCount'   => $validTicketsCount,
             'totalSpent'          => $totalSpent,
             'pendingPaymentCount' => $pendingPaymentCount,
@@ -69,6 +93,13 @@ class ProfileController
     public function updateProfile(): void
     {
         AuthMiddleware::checkCustomer();
+
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ.');
+            redirect(url('profile?tab=account'));
+            return;
+        }
+
         $userId = (int)$_SESSION['user_id'];
 
         $hoTen = trim($_POST['ho_ten'] ?? '');
@@ -94,6 +125,13 @@ class ProfileController
     public function changePassword(): void
     {
         AuthMiddleware::checkCustomer();
+
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ.');
+            redirect(url('profile?tab=account'));
+            return;
+        }
+
         $userId = (int)$_SESSION['user_id'];
 
         $matKhauCu = $_POST['mat_khau_cu'] ?? '';

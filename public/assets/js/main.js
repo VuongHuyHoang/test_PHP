@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', function () {
     let markersLayer = null;
     let userMarker = null;
     let userCoords = null;
+    let userRadiusCircle = null;
+    let currentRadius = 3000;
     let allLocations = [];
 
     // Helper tiền tệ VNĐ (Định nghĩa ở scope cao nhất để tránh ReferenceError)
@@ -15,6 +17,31 @@ document.addEventListener('DOMContentLoaded', function () {
         const num = parseFloat(val) || 0;
         if (num <= 0) return 'Miễn phí';
         return num.toLocaleString('vi-VN') + ' đ';
+    }
+
+    // Helper phòng chống XSS DOM Injection
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    // Helper tạo URL tuyệt đối an toàn cho subfolder / virtual host
+    function getAppUrl(path) {
+        const base = (window.APP_URL || '').replace(/\/$/, '');
+        const cleanPath = (path || '').replace(/^\//, '');
+        return (base ? base : '') + '/' + cleanPath;
+    }
+
+    // Helper chuẩn hóa đường dẫn ảnh (tuyệt đối / tương đối / fallback)
+    function formatImageUrl(url) {
+        if (!url) return getAppUrl('assets/images/placeholder.jpg');
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        return getAppUrl(url);
     }
 
     function deg2rad(deg) {
@@ -61,7 +88,28 @@ document.addEventListener('DOMContentLoaded', function () {
             "Bản đồ Sáng (Positron)": cartoPositron
         }, null, { position: 'topright' }).addTo(map);
 
-        markersLayer = L.layerGroup().addTo(map);
+        // Khởi tạo Marker Cluster gom cụm hoặc fallback về LayerGroup
+        if (typeof L.markerClusterGroup === 'function') {
+            markersLayer = L.markerClusterGroup({
+                showCoverageOnHover: false,
+                zoomToBoundsOnClick: true,
+                spiderfyOnMaxZoom: true,
+                maxClusterRadius: 40,
+                iconCreateFunction: function(cluster) {
+                    const count = cluster.getChildCount();
+                    let sizeClass = 'marker-cluster-small';
+                    if (count > 10) sizeClass = 'marker-cluster-medium';
+                    if (count > 25) sizeClass = 'marker-cluster-large';
+                    return new L.DivIcon({
+                        html: '<div><span>' + count + '</span></div>',
+                        className: 'marker-cluster ' + sizeClass,
+                        iconSize: new L.Point(40, 40)
+                    });
+                }
+            }).addTo(map);
+        } else {
+            markersLayer = L.layerGroup().addTo(map);
+        }
 
         setTimeout(() => {
             map.invalidateSize();
@@ -146,6 +194,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (urlParams.get('tu_khoa')) filters.tu_khoa = urlParams.get('tu_khoa');
         if (urlParams.get('muc_gia')) filters.muc_gia = urlParams.get('muc_gia');
         if (urlParams.get('co_ban_ve')) filters.co_ban_ve = urlParams.get('co_ban_ve');
+        if (urlParams.get('dang_mo_cua')) filters.dang_mo_cua = urlParams.get('dang_mo_cua');
         return filters;
     }
 
@@ -169,8 +218,34 @@ document.addEventListener('DOMContentLoaded', function () {
         if (form.elements['co_ban_ve']) {
             form.elements['co_ban_ve'].checked = (filters.co_ban_ve === '1');
         }
+        if (form.elements['dang_mo_cua']) {
+            form.elements['dang_mo_cua'].checked = (filters.dang_mo_cua === '1');
+        }
 
         locDanhMucTheoLoai();
+        dongBoQuickChips(filters.loai, filters.co_ban_ve, filters.dang_mo_cua);
+    }
+
+    // Helper đồng bộ trạng thái nút Quick Chips
+    function dongBoQuickChips(loai, coBanVe, dangMoCua) {
+        const chips = document.querySelectorAll('[data-filter-chip]');
+        if (!chips.length) return;
+        chips.forEach(c => {
+            const val = c.getAttribute('data-filter-chip');
+            let shouldActive = false;
+            if (dangMoCua === '1') {
+                shouldActive = (val === 'dang_mo_cua');
+            } else if (coBanVe === '1') {
+                shouldActive = (val === 'co_ban_ve');
+            } else if (loai === 'du_lich') {
+                shouldActive = (val === 'du_lich');
+            } else if (loai === 'am_thuc') {
+                shouldActive = (val === 'am_thuc');
+            } else if (!loai && !coBanVe && !dangMoCua) {
+                shouldActive = (val === 'all');
+            }
+            c.classList.toggle('active', shouldActive);
+        });
     }
 
     // 5. Lọc dropdown Danh mục khi chọn Phân loại hình
@@ -184,14 +259,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         options.forEach(opt => {
             if (opt.value === '') {
-                opt.style.display = '';
+                opt.hidden = false;
                 return;
             }
             const optLoai = opt.getAttribute('data-loai');
             if (!loaiDuocChon || optLoai === loaiDuocChon) {
-                opt.style.display = '';
+                opt.hidden = false;
             } else {
-                opt.style.display = 'none';
+                opt.hidden = true;
                 if (opt.selected) {
                     selectDanhMuc.value = '';
                 }
@@ -202,8 +277,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // 6. Hàm tải dữ liệu địa điểm từ API
     function taiDuLieuBanDo(filters = {}) {
         const query = new URLSearchParams(filters).toString();
-        // Dùng relative path để đảm bảo không bị lỗi CORS bất kể truy cập từ localhost hay 127.0.0.1
-        const apiUrl = '/api/locations' + (query ? '?' + query : '');
+        // Dùng helper getAppUrl để hỗ trợ cả domain root lẫn subfolder
+        const apiUrl = getAppUrl('api/locations') + (query ? '?' + query : '');
 
         fetch(apiUrl)
             .then(res => res.json())
@@ -279,19 +354,27 @@ document.addEventListener('DOMContentLoaded', function () {
             const giaFormatted = formatTienTe(item.gia_thap_nhat) + ' - ' + formatTienTe(item.gia_cao_nhat);
             const badgeTag = isFood ? 'badge-tag-food text-coral' : 'badge-tag-travel text-teal';
             const loaiLabel = isFood ? 'Ẩm thực' : 'Du lịch';
+            const safeTitle = escapeHtml(item.ten_dia_diem);
+            const safeAddress = escapeHtml(item.dia_chi);
+            const safeCategory = escapeHtml(item.ten_danh_muc);
+            const safeImage = escapeHtml(formatImageUrl(item.anh_dai_dien));
+            const detailUrl = getAppUrl('dia-diem/' + encodeURIComponent(item.duong_dan));
 
             const popupContent = `
                 <div class="popup-card">
-                    <img src="${item.anh_dai_dien}" class="popup-img" alt="${item.ten_dia_diem}">
+                    <img src="${safeImage}" class="popup-img" alt="${safeTitle}">
                     <div class="popup-body">
-                        <span class="badge-tag ${badgeTag} mb-1 d-inline-block">${loaiLabel} &bull; ${item.ten_danh_muc}</span>
-                        <h6 class="fw-bold text-dark mb-1" style="font-size: 14px;">${item.ten_dia_diem}</h6>
-                        <p class="text-muted small mb-1 text-truncate">${item.dia_chi}</p>
+                        <span class="badge-tag ${badgeTag} mb-1 d-inline-block">${loaiLabel} &bull; ${safeCategory}</span>
+                        <h6 class="fw-bold text-dark mb-1" style="font-size: 14px;">${safeTitle}</h6>
+                        <p class="text-muted small mb-1 text-truncate">${safeAddress}</p>
                         <div class="text-danger fw-bold small mb-2">${giaFormatted}</div>
                         ${distanceHtml}
-                        <div class="mt-2 pt-2 border-top">
-                            <a href="/dia-diem/${item.duong_dan}" class="btn btn-sm btn-primary w-100 py-1" style="font-size: 13px;">
-                                Xem chi tiết & Tọa độ
+                        <div class="mt-2 pt-2 border-top d-flex gap-1">
+                            <button type="button" class="btn btn-sm btn-outline-primary py-2 px-2 rounded-3 fw-semibold d-flex align-items-center justify-content-center gap-1" onclick="window.startMapRouting(${lat}, ${lng}, '${safeTitle.replace(/'/g, "\\'")}')" title="Dẫn đường OSRM">
+                                <i class="bi bi-sign-turn-right-fill"></i><span>Chỉ đường</span>
+                            </button>
+                            <a href="${detailUrl}" class="btn btn-sm btn-primary flex-grow-1 py-2 fw-semibold text-white d-flex align-items-center justify-content-center gap-1 shadow-sm" style="font-size: 13px; color: #ffffff !important; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important; border: none; text-decoration: none !important;">
+                                <i class="bi bi-geo-alt-fill text-white"></i><span>Chi tiết</span>
                             </a>
                         </div>
                     </div>
@@ -372,13 +455,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
 
+            const safeTitle = escapeHtml(item.ten_dia_diem);
+            const safeAddress = escapeHtml(item.dia_chi);
+            const safeCategory = escapeHtml(item.ten_danh_muc);
+            const safeImage = escapeHtml(formatImageUrl(item.anh_dai_dien));
+            const detailUrl = getAppUrl('dia-diem/' + encodeURIComponent(item.duong_dan));
+
             html += `
                 <div class="col-md-6 col-sm-12" id="card-location-${item.id}">
                     <div class="location-card-modern" onclick="focusOnMap(${item.id}, ${item.vi_do}, ${item.kinh_do})" style="cursor: pointer;">
                         <div class="location-card-img-wrap">
-                            <img src="${item.anh_dai_dien}" class="location-card-img" alt="${item.ten_dia_diem}" loading="lazy">
+                            <img src="${safeImage}" class="location-card-img" alt="${safeTitle}" loading="lazy">
                             <span class="card-category-glass ${badgeTag}">
-                                ${loaiLabel} &bull; ${item.ten_danh_muc}
+                                ${loaiLabel} &bull; ${safeCategory}
                             </span>
                             ${ticketBadge}
                         </div>
@@ -392,19 +481,22 @@ document.addEventListener('DOMContentLoaded', function () {
                                 ${distanceHtml}
                             </div>
                             
-                            <h3 class="location-card-title">${item.ten_dia_diem}</h3>
+                            <h3 class="location-card-title">${safeTitle}</h3>
                             
                             <div class="location-card-address">
-                                <i class="bi bi-geo-alt text-danger me-1"></i>${item.dia_chi}
+                                <i class="bi bi-geo-alt text-danger me-1"></i>${safeAddress}
                             </div>
 
                             <div class="d-flex align-items-center justify-content-between pt-2 border-top mt-auto">
                                 <span class="location-card-price">${giaFormatted}</span>
                                 <div class="d-flex gap-1" onclick="event.stopPropagation();">
-                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-1" onclick="focusOnMap(${item.id}, ${item.vi_do}, ${item.kinh_do})" title="Xem vị trí trên bản đồ">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-2 py-1" onclick="focusOnMap(${item.id}, ${item.vi_do}, ${item.kinh_do})" title="Xem vị trí trên bản đồ">
                                         <i class="bi bi-geo-alt"></i>
                                     </button>
-                                    <a href="/dia-diem/${item.duong_dan}" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold">
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-1" onclick="window.startMapRouting(${item.vi_do}, ${item.kinh_do}, '${safeTitle.replace(/'/g, "\\'")}')" title="Chỉ đường OSRM nội bộ">
+                                        <i class="bi bi-sign-turn-right-fill"></i>
+                                    </button>
+                                    <a href="${detailUrl}" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold">
                                         Chi tiết
                                     </a>
                                 </div>
@@ -422,13 +514,29 @@ document.addEventListener('DOMContentLoaded', function () {
     window.focusOnMap = function(id, lat, lng) {
         if (!map || !markersLayer) return;
 
-        map.flyTo([lat, lng], 15, { duration: 0.8 });
+        let targetMarker = null;
 
-        markersLayer.eachLayer(marker => {
-            if (marker.locationId === id) {
-                marker.openPopup();
+        // Tìm marker tương ứng
+        if (typeof markersLayer.eachLayer === 'function') {
+            markersLayer.eachLayer(marker => {
+                if (marker.locationId === id) {
+                    targetMarker = marker;
+                }
+            });
+        }
+
+        if (targetMarker) {
+            if (typeof markersLayer.zoomToShowLayer === 'function') {
+                markersLayer.zoomToShowLayer(targetMarker, function() {
+                    targetMarker.openPopup();
+                });
+            } else {
+                map.flyTo([lat, lng], 15, { duration: 0.8 });
+                targetMarker.openPopup();
             }
-        });
+        } else {
+            map.flyTo([lat, lng], 15, { duration: 0.8 });
+        }
 
         // Đánh dấu viền card
         document.querySelectorAll('.location-card-modern').forEach(el => el.classList.remove('highlighted-card'));
@@ -459,6 +567,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     delete params['co_ban_ve'];
                 }
             }
+            // Kiểm tra checkbox dang_mo_cua
+            if (filterForm.elements['dang_mo_cua']) {
+                if (filterForm.elements['dang_mo_cua'].checked) {
+                    params['dang_mo_cua'] = '1';
+                } else {
+                    delete params['dang_mo_cua'];
+                }
+            }
         }
 
         // Cập nhật URL trình duyệt
@@ -467,6 +583,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const newUrl = window.location.pathname + (newQuery ? '?' + newQuery : '');
             window.history.pushState({}, '', newUrl);
         }
+
+        // Đồng bộ visual chips
+        dongBoQuickChips(params.loai, params.co_ban_ve, params.dang_mo_cua);
 
         // Gọi API lọc
         taiDuLieuBanDo(params);
@@ -540,14 +659,19 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (filterForm.elements['loai']) filterForm.elements['loai'].value = '';
                         if (filterForm.elements['danh_muc_id']) filterForm.elements['danh_muc_id'].value = '';
                         if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = false;
+                        if (filterForm.elements['dang_mo_cua']) filterForm.elements['dang_mo_cua'].checked = false;
                     } else if (type === 'du_lich') {
                         if (filterForm.elements['loai']) filterForm.elements['loai'].value = 'du_lich';
                         if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = false;
+                        if (filterForm.elements['dang_mo_cua']) filterForm.elements['dang_mo_cua'].checked = false;
                     } else if (type === 'am_thuc') {
                         if (filterForm.elements['loai']) filterForm.elements['loai'].value = 'am_thuc';
                         if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = false;
+                        if (filterForm.elements['dang_mo_cua']) filterForm.elements['dang_mo_cua'].checked = false;
                     } else if (type === 'co_ban_ve') {
                         if (filterForm.elements['co_ban_ve']) filterForm.elements['co_ban_ve'].checked = true;
+                    } else if (type === 'dang_mo_cua') {
+                        if (filterForm.elements['dang_mo_cua']) filterForm.elements['dang_mo_cua'].checked = true;
                     }
                     locDanhMucTheoLoai();
                 }
@@ -558,59 +682,129 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // 13. Định vị GPS người dùng
+    // 13. Định vị GPS người dùng & Bộ lọc bán kính (Radius Filter)
     function ganSuKienDinhVi() {
         const btnLocate = document.getElementById('btn-locate-me');
+        const radiusBar = document.getElementById('radiusFilterBar');
+        const radiusChips = document.querySelectorAll('.radius-chip');
         if (!btnLocate) return;
 
-        btnLocate.addEventListener('click', function () {
-            if (!navigator.geolocation) {
-                alert('Trình duyệt của bạn không hỗ trợ định vị GPS.');
-                return;
+        function applyUserPosition(lat, lng, isDemo = false) {
+            userCoords = { lat: lat, lng: lng };
+
+            if (userMarker && map) {
+                map.removeLayer(userMarker);
             }
 
+            const userIcon = L.divIcon({
+                className: 'custom-leaflet-marker-wrapper',
+                html: '<div class="custom-marker marker-user"><i class="bi bi-person-fill"></i></div>',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+
+            userMarker = L.marker([userCoords.lat, userCoords.lng], { icon: userIcon })
+                .addTo(map)
+                .bindPopup('<strong>Vị trí của bạn</strong>' + (isDemo ? '<br><small class="text-muted">(Demo Quảng trường 2/4)</small>' : ''))
+                .openPopup();
+
+            if (radiusBar) {
+                radiusBar.classList.remove('d-none');
+                radiusBar.classList.add('d-flex');
+            }
+
+            updateRadiusCircleAndFilter();
+        }
+
+        function updateRadiusCircleAndFilter() {
+            if (!userCoords || !map) return;
+
+            if (userRadiusCircle) {
+                map.removeLayer(userRadiusCircle);
+                userRadiusCircle = null;
+            }
+
+            let filtered = [...allLocations];
+
+            if (currentRadius !== 'all') {
+                userRadiusCircle = L.circle([userCoords.lat, userCoords.lng], {
+                    radius: currentRadius,
+                    color: '#0284c7',
+                    fillColor: '#38bdf8',
+                    fillOpacity: 0.12,
+                    weight: 2,
+                    dashArray: '5, 5'
+                }).addTo(map);
+
+                const radiusKm = currentRadius / 1000;
+                filtered = filtered.filter(item => {
+                    const dist = tinhKhoangCachKm(userCoords.lat, userCoords.lng, parseFloat(item.vi_do), parseFloat(item.kinh_do));
+                    return dist <= radiusKm;
+                });
+
+                filtered.sort((a, b) => {
+                    const da = tinhKhoangCachKm(userCoords.lat, userCoords.lng, parseFloat(a.vi_do), parseFloat(a.kinh_do));
+                    const db = tinhKhoangCachKm(userCoords.lat, userCoords.lng, parseFloat(b.vi_do), parseFloat(b.kinh_do));
+                    return da - db;
+                });
+
+                map.fitBounds(userRadiusCircle.getBounds(), { padding: [30, 30] });
+            } else {
+                map.flyTo([userCoords.lat, userCoords.lng], 13, { duration: 0.8 });
+            }
+
+            const resText = document.getElementById('radiusResultText');
+            if (resText) {
+                if (currentRadius === 'all') {
+                    resText.textContent = `Tất cả ${allLocations.length} địa điểm`;
+                } else {
+                    resText.textContent = `Tìm thấy ${filtered.length} địa điểm trong ${currentRadius / 1000} km`;
+                }
+            }
+
+            capNhatDanhSachCards(filtered);
+            renderMarkers(filtered);
+        }
+
+        btnLocate.addEventListener('click', function () {
             btnLocate.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang định vị...';
             btnLocate.disabled = true;
+
+            if (!navigator.geolocation) {
+                btnLocate.innerHTML = '<i class="bi bi-geo-alt-fill text-danger me-1"></i> Vị trí của bạn (Demo)';
+                btnLocate.disabled = false;
+                applyUserPosition(12.2388, 109.1961, true);
+                return;
+            }
 
             navigator.geolocation.getCurrentPosition(
                 function (position) {
                     btnLocate.innerHTML = '<i class="bi bi-geo-alt-fill text-danger me-1"></i> Vị trí của bạn';
                     btnLocate.disabled = false;
-
-                    userCoords = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    };
-
-                    if (userMarker && map) {
-                        map.removeLayer(userMarker);
-                    }
-
-                    const userIcon = L.divIcon({
-                        className: 'custom-leaflet-marker-wrapper',
-                        html: '<div class="custom-marker marker-user"><i class="bi bi-person-fill"></i></div>',
-                        iconSize: [36, 36],
-                        iconAnchor: [18, 18]
-                    });
-
-                    userMarker = L.marker([userCoords.lat, userCoords.lng], { icon: userIcon })
-                        .addTo(map)
-                        .bindPopup('<strong>Vị trí hiện tại của bạn</strong>')
-                        .openPopup();
-
-                    map.flyTo([userCoords.lat, userCoords.lng], 14, { duration: 1 });
-
-                    if (allLocations.length > 0) {
-                        capNhatDanhSachCards(allLocations);
-                    }
+                    applyUserPosition(position.coords.latitude, position.coords.longitude, false);
                 },
                 function (err) {
-                    btnLocate.innerHTML = '<i class="bi bi-crosshair me-1 text-primary"></i> Gần vị trí của tôi';
+                    btnLocate.innerHTML = '<i class="bi bi-geo-alt-fill text-danger me-1"></i> Vị trí của bạn (Demo)';
                     btnLocate.disabled = false;
-                    alert('Không thể xác định vị trí của bạn: ' + err.message);
+                    applyUserPosition(12.2388, 109.1961, true);
                 },
-                { enableHighAccuracy: true, timeout: 8000 }
+                { enableHighAccuracy: true, timeout: 6000 }
             );
+        });
+
+        radiusChips.forEach(chip => {
+            chip.addEventListener('click', function () {
+                radiusChips.forEach(c => {
+                    c.classList.remove('btn-primary', 'active');
+                    c.classList.add(c.getAttribute('data-radius') === 'all' ? 'btn-outline-secondary' : 'btn-outline-primary');
+                });
+                this.classList.remove('btn-outline-primary', 'btn-outline-secondary');
+                this.classList.add('btn-primary', 'active');
+
+                const val = this.getAttribute('data-radius');
+                currentRadius = (val === 'all') ? 'all' : parseInt(val);
+                updateRadiusCircleAndFilter();
+            });
         });
     }
 
@@ -720,6 +914,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }).setView([lat, lng], 15);
 
             taoTileLayer().addTo(detailMap);
+            window.detailMapInstance = detailMap;
 
             setTimeout(() => {
                 detailMap.invalidateSize();
@@ -738,4 +933,384 @@ document.addEventListener('DOMContentLoaded', function () {
                 .openPopup();
         }
     }
+
+    // ========================================================
+    // 17. OSRM DẪN ĐƯỜNG NỘI BỘ TRÊN BẢN ĐỒ CHÍNH (IN-APP ROUTING)
+    // ========================================================
+    let mapRouteLayer = null;
+    let activeRoutingState = null;
+
+    window.switchMapRoutingMode = function (mode) {
+        if (!activeRoutingState) return;
+        activeRoutingState.mode = mode;
+        window.startMapRouting(activeRoutingState.destLat, activeRoutingState.destLng, activeRoutingState.destTitle, mode);
+    };
+
+    window.startMapRouting = function (destLat, destLng, destTitle, routeMode = 'driving') {
+        if (!map) return;
+
+        activeRoutingState = {
+            destLat: destLat,
+            destLng: destLng,
+            destTitle: destTitle,
+            mode: routeMode
+        };
+
+        let panel = document.getElementById('map-osrm-panel');
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.id = 'map-osrm-panel';
+            panel.className = 'osrm-route-panel shadow-lg';
+            const mapWrapper = document.querySelector('.sticky-map-wrapper') || mapElement.parentElement;
+            mapWrapper.appendChild(panel);
+        }
+
+        const modeBadge = (routeMode === 'foot') ? 'Đi bộ ven biển' : 'Xe máy / Ô tô';
+
+        panel.innerHTML = `
+            <div class="osrm-panel-header">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-sign-turn-right-fill text-warning fs-5"></i>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-white text-truncate" style="font-size: 13.5px; max-width: 200px;">${escapeHtml(destTitle)}</h6>
+                            <small class="text-white-50" style="font-size: 11px;">Chỉ đường OSRM (${modeBadge})</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-light py-0 px-2 rounded-pill fw-bold" onclick="window.closeMapRouting()" title="Đóng lộ trình">✕</button>
+                </div>
+                <div class="btn-group btn-group-sm w-100 rounded-pill overflow-hidden p-0.5" style="background: rgba(255,255,255,0.2);">
+                    <button type="button" class="btn btn-sm rounded-pill py-0.5 fw-semibold ${routeMode === 'driving' ? 'btn-light text-primary shadow-xs' : 'text-white border-0'}" onclick="window.switchMapRoutingMode('driving')">
+                        <i class="bi bi-bicycle me-1"></i>Xe máy / Ô tô
+                    </button>
+                    <button type="button" class="btn btn-sm rounded-pill py-0.5 fw-semibold ${routeMode === 'foot' ? 'btn-light text-success shadow-xs' : 'text-white border-0'}" onclick="window.switchMapRoutingMode('foot')">
+                        <i class="bi bi-person-walking me-1"></i>Đi bộ
+                    </button>
+                </div>
+            </div>
+            <div class="osrm-panel-body py-4 text-center">
+                <div class="spinner-border text-primary spinner-border-sm me-2" role="status"></div>
+                <span class="text-muted small">Đang tính toán lộ trình ${routeMode === 'foot' ? 'đi bộ' : 'đường bộ'}...</span>
+            </div>
+        `;
+
+        function computeOSRM(startLat, startLng, isFallback = false) {
+            const osrmProfile = (routeMode === 'foot') ? 'foot' : 'driving';
+            const url = `https://router.project-osrm.org/route/v1/${osrmProfile}/${startLng},${startLat};${destLng},${destLat}?overview=full&geometries=geojson&steps=true`;
+
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+                        panel.innerHTML = `
+                            <div class="osrm-panel-header d-flex align-items-center justify-content-between">
+                                <span class="fw-bold">Lộ trình OSRM</span>
+                                <button type="button" class="btn btn-sm btn-light py-0 px-2 rounded-pill fw-bold" onclick="window.closeMapRouting()">✕</button>
+                            </div>
+                            <div class="p-3 text-center text-danger small">Không tìm thấy lộ trình phù hợp. Vui lòng thử đổi phương tiện.</div>
+                        `;
+                        return;
+                    }
+
+                    const route = data.routes[0];
+                    const km = (route.distance / 1000).toFixed(1);
+                    let mins = Math.max(1, Math.round(route.duration / 60));
+                    if (routeMode === 'foot') {
+                        // Tính toán thời gian đi bộ trung bình 4.5km/h (~75m/phút)
+                        mins = Math.max(1, Math.round(route.distance / 75));
+                    }
+
+                    if (mapRouteLayer) {
+                        map.removeLayer(mapRouteLayer);
+                    }
+
+                    const latLngs = route.geometry.coordinates.map(c => [c[1], c[0]]);
+                    const lineColor = (routeMode === 'foot') ? '#10b981' : '#0284c7';
+                    const casing = L.polyline(latLngs, { color: '#091e3a', weight: 7, opacity: 0.85 });
+                    const line = L.polyline(latLngs, { color: lineColor, weight: 4.5, opacity: 0.95, dashArray: routeMode === 'foot' ? '6, 6' : null });
+
+                    const startIcon = L.divIcon({
+                        className: 'custom-leaflet-marker-wrapper',
+                        html: '<div class="custom-marker" style="background:#16a34a; border-color:#ffffff; color:#fff; width:28px; height:28px; font-size:12px; display:flex; align-items:center; justify-content:center; border-radius:50%;"><i class="bi bi-geo-alt-fill"></i></div>',
+                        iconSize: [28, 28]
+                    });
+                    const startMarker = L.marker([startLat, startLng], { icon: startIcon })
+                        .bindPopup('<strong>Điểm xuất phát</strong>' + (isFallback ? '<br><small class="text-muted">(Quảng trường 2/4 Demo)</small>' : '<br><small class="text-muted">(Vị trí của bạn)</small>'));
+
+                    mapRouteLayer = L.layerGroup([casing, line, startMarker]).addTo(map);
+                    map.fitBounds(casing.getBounds(), { padding: [50, 50] });
+
+                    let stepsHtml = '';
+                    if (route.legs && route.legs[0] && route.legs[0].steps) {
+                        route.legs[0].steps.forEach((st) => {
+                            const m = st.maneuver || {};
+                            let icon = '<i class="bi bi-arrow-up"></i>';
+                            let desc = '';
+                            const name = st.name ? `<strong>${escapeHtml(st.name)}</strong>` : 'đoạn đường';
+                            const distStep = st.distance >= 1000 ? (st.distance / 1000).toFixed(1) + ' km' : Math.round(st.distance) + ' m';
+
+                            if (m.type === 'depart') {
+                                icon = '<i class="bi bi-play-circle-fill text-success"></i>';
+                                desc = 'Bắt đầu di chuyển vào ' + name;
+                            } else if (m.type === 'arrive') {
+                                icon = '<i class="bi bi-geo-alt-fill text-danger"></i>';
+                                desc = 'Đến điểm hẹn: ' + escapeHtml(destTitle);
+                            } else if (m.modifier && m.modifier.includes('left')) {
+                                icon = '<i class="bi bi-arrow-90deg-left text-primary"></i>';
+                                desc = 'Rẽ trái vào ' + name;
+                            } else if (m.modifier && m.modifier.includes('right')) {
+                                icon = '<i class="bi bi-arrow-90deg-right text-primary"></i>';
+                                desc = 'Rẽ phải vào ' + name;
+                            } else {
+                                icon = '<i class="bi bi-arrow-up text-secondary"></i>';
+                                desc = 'Đi thẳng tiếp tục ' + name;
+                            }
+
+                            stepsHtml += `
+                                <div class="osrm-step-item">
+                                    <div class="osrm-step-icon">${icon}</div>
+                                    <div class="flex-grow-1">
+                                        <div class="text-dark">${desc}</div>
+                                        <span class="text-muted" style="font-size: 11px;">(khoảng ${distStep})</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    const timeLabel = (routeMode === 'foot') ? `~${mins} phút đi bộ` : `~${mins} phút di chuyển`;
+
+                    panel.innerHTML = `
+                        <div class="osrm-panel-header">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-sign-turn-right-fill text-warning fs-5"></i>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-white text-truncate" style="font-size: 13.5px; max-width: 200px;">
+                                            ${escapeHtml(destTitle)}
+                                        </h6>
+                                        <div class="d-flex align-items-center gap-1 mt-1">
+                                            <span class="badge bg-white text-dark rounded-pill fw-bold" style="font-size: 11px;">${km} km</span>
+                                            <span class="badge bg-warning text-dark rounded-pill fw-bold" style="font-size: 11px;">${timeLabel}</span>
+                                            ${isFallback ? '<span class="badge bg-light text-secondary rounded-pill" style="font-size: 10px;">Demo</span>' : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-light py-0 px-2 rounded-pill fw-bold" onclick="window.closeMapRouting()" title="Đóng lộ trình">✕</button>
+                            </div>
+                            <div class="btn-group btn-group-sm w-100 rounded-pill overflow-hidden p-0.5" style="background: rgba(255,255,255,0.2);">
+                                <button type="button" class="btn btn-sm rounded-pill py-0.5 fw-semibold ${routeMode === 'driving' ? 'btn-light text-primary shadow-xs' : 'text-white border-0'}" onclick="window.switchMapRoutingMode('driving')">
+                                    <i class="bi bi-bicycle me-1"></i>Xe máy / Ô tô
+                                </button>
+                                <button type="button" class="btn btn-sm rounded-pill py-0.5 fw-semibold ${routeMode === 'foot' ? 'btn-light text-success shadow-xs' : 'text-white border-0'}" onclick="window.switchMapRoutingMode('foot')">
+                                    <i class="bi bi-person-walking me-1"></i>Đi bộ
+                                </button>
+                            </div>
+                        </div>
+                        <div class="osrm-panel-body" id="osrmStepsBody">
+                            ${stepsHtml}
+                        </div>
+                    `;
+                })
+                .catch(() => {
+                    panel.innerHTML = `
+                        <div class="osrm-panel-header d-flex align-items-center justify-content-between">
+                            <span class="fw-bold">Lỗi OSRM</span>
+                            <button type="button" class="btn btn-sm btn-light py-0 px-2 rounded-pill fw-bold" onclick="window.closeMapRouting()">✕</button>
+                        </div>
+                        <div class="p-3 text-center text-muted small">Không thể kết nối đến máy chủ dẫn đường OSRM.</div>
+                    `;
+                });
+        }
+
+        if (userCoords && userCoords.lat && userCoords.lng) {
+            computeOSRM(userCoords.lat, userCoords.lng, false);
+        } else if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    computeOSRM(pos.coords.latitude, pos.coords.longitude, false);
+                },
+                () => {
+                    computeOSRM(12.2388, 109.1961, true);
+                },
+                { timeout: 4000 }
+            );
+        } else {
+            computeOSRM(12.2388, 109.1961, true);
+        }
+    };
+
+    window.closeMapRouting = function () {
+        const panel = document.getElementById('map-osrm-panel');
+        if (panel) panel.remove();
+        activeRoutingState = null;
+
+        if (map && mapRouteLayer) {
+            map.removeLayer(mapRouteLayer);
+            mapRouteLayer = null;
+        }
+    };
+
+    // ========================================================
+    // 18. LIVE AUTO-SUGGEST SEARCH TỨC THÌ
+    // ========================================================
+    function initLiveAutoSuggest() {
+        const searchInputs = document.querySelectorAll('.live-search-input, input[name="tu_khoa"]');
+        if (!searchInputs || searchInputs.length === 0) return;
+
+        searchInputs.forEach(input => {
+            let dropdown = null;
+            let debounceTimer = null;
+            let selectedIndex = -1;
+
+            const wrapper = input.closest('.live-search-wrapper') || input.parentElement;
+            if (wrapper && getComputedStyle(wrapper).position === 'static') {
+                wrapper.style.position = 'relative';
+            }
+
+            function createDropdown() {
+                if (!dropdown) {
+                    dropdown = document.createElement('div');
+                    dropdown.className = 'search-suggest-dropdown shadow-lg';
+                    dropdown.style.display = 'none';
+                    wrapper.appendChild(dropdown);
+                }
+                return dropdown;
+            }
+
+            function highlightMatch(text, query) {
+                if (!query) return escapeHtml(text);
+                const regex = new RegExp('(' + query.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + ')', 'gi');
+                return escapeHtml(text).replace(regex, '<mark>$1</mark>');
+            }
+
+            function renderResults(results, query) {
+                selectedIndex = -1;
+                const dd = createDropdown();
+
+                if (!results || results.length === 0) {
+                    dd.innerHTML = `
+                        <div class="p-3 text-center text-muted small">
+                            <i class="bi bi-search me-1"></i>Không tìm thấy địa điểm nào khớp với "<strong>${escapeHtml(query)}</strong>"
+                        </div>
+                    `;
+                    dd.style.display = 'block';
+                    return;
+                }
+
+                let html = '';
+                results.forEach((item, idx) => {
+                    const openBadge = item.dang_mo_cua 
+                        ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill py-0 px-2" style="font-size:10px;">Đang mở</span>'
+                        : '<span class="badge bg-secondary-subtle text-secondary rounded-pill py-0 px-2" style="font-size:10px;">Đóng cửa</span>';
+                    
+                    const ticketBadge = item.co_ban_ve 
+                        ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill py-0 px-2" style="font-size:10px;"><i class="bi bi-ticket-perforated"></i> Vé E-Voucher</span>'
+                        : '';
+
+                    const priceText = item.gia_thap_nhat > 0 
+                        ? formatTienTe(item.gia_thap_nhat) 
+                        : 'Miễn phí';
+
+                    html += `
+                        <a href="${item.url}" class="suggest-item" data-index="${idx}">
+                            <img src="${item.anh_dai_dien}" class="suggest-thumb" alt="${escapeHtml(item.ten_dia_diem)}" loading="lazy">
+                            <div class="suggest-info">
+                                <div class="suggest-title">${highlightMatch(item.ten_dia_diem, query)}</div>
+                                <div class="suggest-meta">
+                                    <span class="badge bg-light text-secondary border py-0 px-1" style="font-size:10px;">${escapeHtml(item.ten_danh_muc)}</span>
+                                    ${openBadge}
+                                    ${ticketBadge}
+                                    <span class="text-danger fw-semibold ms-auto" style="font-size:11.5px;">${priceText}</span>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                });
+
+                dd.innerHTML = html;
+                dd.style.display = 'block';
+
+                dd.querySelectorAll('.suggest-item').forEach(el => {
+                    el.addEventListener('mouseenter', function() {
+                        dd.querySelectorAll('.suggest-item').forEach(s => s.classList.remove('selected'));
+                        this.classList.add('selected');
+                        selectedIndex = parseInt(this.dataset.index, 10);
+                    });
+                });
+            }
+
+            function hideDropdown() {
+                if (dropdown) {
+                    dropdown.style.display = 'none';
+                }
+                selectedIndex = -1;
+            }
+
+            function performSearch() {
+                const val = input.value.trim();
+                if (val.length < 1) {
+                    hideDropdown();
+                    return;
+                }
+
+                const apiUrl = getAppUrl('api/search-suggest?q=' + encodeURIComponent(val));
+                fetch(apiUrl)
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res && res.status === 'success') {
+                            renderResults(res.data, val);
+                        }
+                    })
+                    .catch(() => {});
+            }
+
+            input.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(performSearch, 220);
+            });
+
+            input.addEventListener('focus', function() {
+                if (input.value.trim().length >= 1) {
+                    performSearch();
+                }
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (!dropdown || dropdown.style.display === 'none') return;
+                const items = dropdown.querySelectorAll('.suggest-item');
+                if (items.length === 0) return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = (selectedIndex + 1) % items.length;
+                    items.forEach((item, idx) => {
+                        item.classList.toggle('selected', idx === selectedIndex);
+                    });
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+                    items.forEach((item, idx) => {
+                        item.classList.toggle('selected', idx === selectedIndex);
+                    });
+                } else if (e.key === 'Enter') {
+                    if (selectedIndex >= 0 && items[selectedIndex]) {
+                        e.preventDefault();
+                        window.location.href = items[selectedIndex].href;
+                    }
+                } else if (e.key === 'Escape') {
+                    hideDropdown();
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!wrapper.contains(e.target)) {
+                    hideDropdown();
+                }
+            });
+        });
+    }
+
+    initLiveAutoSuggest();
 });

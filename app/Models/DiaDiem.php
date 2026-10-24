@@ -15,6 +15,93 @@ class DiaDiem
     }
 
     /**
+     * Tối ưu hóa điều kiện tìm kiếm sử dụng MySQL FULLTEXT kết hợp Prefix Match
+     */
+    private function buildSearchClause(string $tuKhoa, array &$params): string
+    {
+        $tuKhoa = trim($tuKhoa);
+        if (empty($tuKhoa)) return "";
+
+        $searchPattern = '%' . $tuKhoa . '%';
+        $startPattern = $tuKhoa . '%';
+        $params['tu_khoa_name'] = $searchPattern;
+        $params['tu_khoa_addr'] = $searchPattern;
+        $params['tu_khoa_cat']  = $searchPattern;
+        $params['tu_khoa_order_start'] = $startPattern;
+        $params['tu_khoa_order_like']  = $searchPattern;
+
+        // Chuẩn bị từ khóa cho Full-Text Search (loại bỏ ký tự đặc biệt)
+        $cleanKw = preg_replace('/[+\-><()~*"@]+/', ' ', $tuKhoa);
+        $words = array_filter(explode(' ', trim($cleanKw)));
+
+        if (count($words) > 0 && mb_strlen($tuKhoa, 'UTF-8') >= 3) {
+            $ftWords = [];
+            foreach ($words as $w) {
+                if (mb_strlen($w, 'UTF-8') >= 2) {
+                    $ftWords[] = '+' . $w . '*';
+                }
+            }
+            if (!empty($ftWords)) {
+                $params['ft_query'] = implode(' ', $ftWords);
+                return " AND (
+                    MATCH(d.ten_dia_diem, d.dia_chi, d.mo_ta_ngan) AGAINST(:ft_query IN BOOLEAN MODE)
+                    OR d.ten_dia_diem LIKE :tu_khoa_name
+                    OR d.dia_chi LIKE :tu_khoa_addr
+                    OR dm.ten_danh_muc LIKE :tu_khoa_cat
+                )";
+            }
+        }
+
+        return " AND (
+            d.ten_dia_diem LIKE :tu_khoa_name
+            OR d.dia_chi LIKE :tu_khoa_addr
+            OR dm.ten_danh_muc LIKE :tu_khoa_cat
+        )";
+    }
+
+    /**
+     * Tìm kiếm gợi ý nhanh tức thì (Live Auto-Suggest)
+     */
+    public function timKiemGoiY(string $tuKhoa, int $limit = 6): array
+    {
+        $tuKhoa = trim($tuKhoa);
+        if (empty($tuKhoa)) {
+            return [];
+        }
+
+        $params = [];
+        $searchClause = $this->buildSearchClause($tuKhoa, $params);
+        $currentTime = date('H:i:s');
+        $params['now_t1'] = $currentTime;
+        $params['now_t2'] = $currentTime;
+        $params['now_t3'] = $currentTime;
+        $params['now_t4'] = $currentTime;
+
+        $sql = "
+            SELECT d.id, d.ten_dia_diem, d.duong_dan, d.dia_chi, d.anh_dai_dien,
+                   d.gia_thap_nhat, d.gia_cao_nhat, d.co_ban_ve, d.gio_mo_cua, d.gio_dong_cua,
+                   dm.ten_danh_muc, dm.loai_danh_muc,
+                   COALESCE(AVG(dg.so_sao), 0) as diem_danh_gia,
+                   (
+                       (d.gio_mo_cua IS NULL OR d.gio_dong_cua IS NULL)
+                       OR (d.gio_mo_cua <= d.gio_dong_cua AND :now_t1 >= d.gio_mo_cua AND :now_t2 <= d.gio_dong_cua)
+                       OR (d.gio_mo_cua > d.gio_dong_cua AND (:now_t3 >= d.gio_mo_cua OR :now_t4 <= d.gio_dong_cua))
+                   ) as dang_mo_cua
+            FROM dia_diem d
+            JOIN danh_muc dm ON d.danh_muc_id = dm.id
+            LEFT JOIN danh_gia dg ON d.id = dg.dia_diem_id AND dg.trang_thai = 'da_duyet'
+            WHERE d.trang_thai = 'hien_thi'
+            {$searchClause}
+            GROUP BY d.id
+            ORDER BY (CASE WHEN d.ten_dia_diem LIKE :tu_khoa_order_start THEN 1 WHEN d.ten_dia_diem LIKE :tu_khoa_order_like THEN 2 ELSE 3 END), d.luot_xem DESC
+            LIMIT " . (int)$limit;
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    /**
      * Lấy danh sách địa điểm kèm bộ lọc
      */
     public function danhSach(array $filters = []): array
@@ -40,10 +127,13 @@ class DiaDiem
             $params['danh_muc_id'] = $filters['danh_muc_id'];
         }
 
+        if (!empty($filters['exclude_id'])) {
+            $sql .= " AND d.id != :exclude_id";
+            $params['exclude_id'] = (int)$filters['exclude_id'];
+        }
+
         if (!empty($filters['tu_khoa'])) {
-            $sql .= " AND (d.ten_dia_diem LIKE :tu_khoa_ten OR d.dia_chi LIKE :tu_khoa_dc)";
-            $params['tu_khoa_ten'] = '%' . $filters['tu_khoa'] . '%';
-            $params['tu_khoa_dc']  = '%' . $filters['tu_khoa'] . '%';
+            $sql .= $this->buildSearchClause($filters['tu_khoa'], $params);
         }
 
         if (isset($filters['co_ban_ve']) && $filters['co_ban_ve'] !== '') {
@@ -61,7 +151,24 @@ class DiaDiem
             }
         }
 
-        $sql .= " GROUP BY d.id ORDER BY d.luot_xem DESC, d.id DESC";
+        if (!empty($filters['dang_mo_cua'])) {
+            $currentTime = date('H:i:s');
+            $sql .= " AND (
+                (d.gio_mo_cua IS NULL OR d.gio_dong_cua IS NULL)
+                OR (d.gio_mo_cua <= d.gio_dong_cua AND :now_t1 >= d.gio_mo_cua AND :now_t2 <= d.gio_dong_cua)
+                OR (d.gio_mo_cua > d.gio_dong_cua AND (:now_t3 >= d.gio_mo_cua OR :now_t4 <= d.gio_dong_cua))
+            )";
+            $params['now_t1'] = $currentTime;
+            $params['now_t2'] = $currentTime;
+            $params['now_t3'] = $currentTime;
+            $params['now_t4'] = $currentTime;
+        }
+
+        if (!empty($filters['tu_khoa'])) {
+            $sql .= " GROUP BY d.id ORDER BY (CASE WHEN d.ten_dia_diem LIKE :tu_khoa_order_start THEN 1 WHEN d.ten_dia_diem LIKE :tu_khoa_order_like THEN 2 ELSE 3 END), d.luot_xem DESC, d.id DESC";
+        } else {
+            $sql .= " GROUP BY d.id ORDER BY d.luot_xem DESC, d.id DESC";
+        }
 
         if (!empty($filters['limit'])) {
             $sql .= " LIMIT " . (int)$filters['limit'];
@@ -80,6 +187,7 @@ class DiaDiem
         $sql = "
             SELECT d.id, d.ten_dia_diem, d.duong_dan, d.dia_chi, d.vi_do, d.kinh_do,
                    d.gia_thap_nhat, d.gia_cao_nhat, d.anh_dai_dien, d.co_ban_ve, d.luot_xem,
+                   d.gio_mo_cua, d.gio_dong_cua,
                    dm.ten_danh_muc, dm.loai_danh_muc,
                    COALESCE(AVG(dg.so_sao), 0) as diem_danh_gia,
                    COUNT(dg.id) as tong_danh_gia
@@ -100,10 +208,13 @@ class DiaDiem
             $params['danh_muc_id'] = $filters['danh_muc_id'];
         }
 
+        if (!empty($filters['exclude_id'])) {
+            $sql .= " AND d.id != :exclude_id";
+            $params['exclude_id'] = (int)$filters['exclude_id'];
+        }
+
         if (!empty($filters['tu_khoa'])) {
-            $sql .= " AND (d.ten_dia_diem LIKE :tu_khoa_ten OR d.dia_chi LIKE :tu_khoa_dc)";
-            $params['tu_khoa_ten'] = '%' . $filters['tu_khoa'] . '%';
-            $params['tu_khoa_dc']  = '%' . $filters['tu_khoa'] . '%';
+            $sql .= $this->buildSearchClause($filters['tu_khoa'], $params);
         }
 
         if (isset($filters['co_ban_ve']) && $filters['co_ban_ve'] !== '') {
@@ -121,7 +232,24 @@ class DiaDiem
             }
         }
 
-        $sql .= " GROUP BY d.id ORDER BY d.luot_xem DESC, d.id DESC";
+        if (!empty($filters['dang_mo_cua'])) {
+            $currentTime = date('H:i:s');
+            $sql .= " AND (
+                (d.gio_mo_cua IS NULL OR d.gio_dong_cua IS NULL)
+                OR (d.gio_mo_cua <= d.gio_dong_cua AND :now_t1 >= d.gio_mo_cua AND :now_t2 <= d.gio_dong_cua)
+                OR (d.gio_mo_cua > d.gio_dong_cua AND (:now_t3 >= d.gio_mo_cua OR :now_t4 <= d.gio_dong_cua))
+            )";
+            $params['now_t1'] = $currentTime;
+            $params['now_t2'] = $currentTime;
+            $params['now_t3'] = $currentTime;
+            $params['now_t4'] = $currentTime;
+        }
+
+        if (!empty($filters['tu_khoa'])) {
+            $sql .= " GROUP BY d.id ORDER BY (CASE WHEN d.ten_dia_diem LIKE :tu_khoa_order_start THEN 1 WHEN d.ten_dia_diem LIKE :tu_khoa_order_like THEN 2 ELSE 3 END), d.luot_xem DESC, d.id DESC";
+        } else {
+            $sql .= " GROUP BY d.id ORDER BY d.luot_xem DESC, d.id DESC";
+        }
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -176,13 +304,12 @@ class DiaDiem
     }
 
     /**
-     * Danh sách toàn bộ địa điểm cho quản trị viên (có tìm kiếm & lọc)
+     * Đếm tổng số địa điểm thỏa mãn bộ lọc cho quản trị viên
      */
-    public function danhSachAdmin(array $filters = []): array
+    public function demAdmin(array $filters = []): int
     {
         $sql = "
-            SELECT d.*, dm.ten_danh_muc, dm.loai_danh_muc,
-                   (SELECT COUNT(*) FROM goi_ve gv WHERE gv.dia_diem_id = d.id) as so_goi_ve
+            SELECT COUNT(DISTINCT d.id)
             FROM dia_diem d
             JOIN danh_muc dm ON d.danh_muc_id = dm.id
             WHERE 1=1
@@ -190,9 +317,7 @@ class DiaDiem
         $params = [];
 
         if (!empty($filters['tu_khoa'])) {
-            $sql .= " AND (d.ten_dia_diem LIKE :tu_khoa_ten OR d.dia_chi LIKE :tu_khoa_dc)";
-            $params['tu_khoa_ten'] = '%' . $filters['tu_khoa'] . '%';
-            $params['tu_khoa_dc']  = '%' . $filters['tu_khoa'] . '%';
+            $sql .= $this->buildSearchClause($filters['tu_khoa'], $params);
         }
 
         if (!empty($filters['danh_muc_id'])) {
@@ -205,7 +330,56 @@ class DiaDiem
             $params['loai'] = $filters['loai'];
         }
 
+        if (isset($filters['co_ban_ve']) && $filters['co_ban_ve'] !== '') {
+            $sql .= " AND d.co_ban_ve = :co_ban_ve";
+            $params['co_ban_ve'] = (int)$filters['co_ban_ve'];
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return (int)$stmt->fetchColumn();
+    }
+
+    /**
+     * Danh sách địa điểm cho quản trị viên (có tìm kiếm, lọc & phân trang)
+     */
+    public function danhSachAdmin(array $filters = [], ?int $page = null, ?int $perPage = null): array
+    {
+        $sql = "
+            SELECT d.*, dm.ten_danh_muc, dm.loai_danh_muc,
+                   (SELECT COUNT(*) FROM goi_ve gv WHERE gv.dia_diem_id = d.id) as so_goi_ve
+            FROM dia_diem d
+            JOIN danh_muc dm ON d.danh_muc_id = dm.id
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if (!empty($filters['tu_khoa'])) {
+            $sql .= $this->buildSearchClause($filters['tu_khoa'], $params);
+        }
+
+        if (!empty($filters['danh_muc_id'])) {
+            $sql .= " AND d.danh_muc_id = :danh_muc_id";
+            $params['danh_muc_id'] = (int)$filters['danh_muc_id'];
+        }
+
+        if (!empty($filters['loai'])) {
+            $sql .= " AND dm.loai_danh_muc = :loai";
+            $params['loai'] = $filters['loai'];
+        }
+
+        if (isset($filters['co_ban_ve']) && $filters['co_ban_ve'] !== '') {
+            $sql .= " AND d.co_ban_ve = :co_ban_ve";
+            $params['co_ban_ve'] = (int)$filters['co_ban_ve'];
+        }
+
         $sql .= " ORDER BY d.id DESC";
+
+        if ($page !== null && $perPage !== null && $perPage > 0) {
+            $page = max(1, $page);
+            $offset = ($page - 1) * $perPage;
+            $sql .= " LIMIT " . (int)$perPage . " OFFSET " . (int)$offset;
+        }
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

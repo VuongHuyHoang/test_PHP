@@ -1,3 +1,8 @@
+<?php
+/**
+ * @var string|null $title
+ */
+?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -11,14 +16,21 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <!-- Leaflet.js CSS (Bản đồ số OpenStreetMap) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     
-    <!-- Google Fonts -->
+    <!-- Google Fonts: Be Vietnam Pro (Chuẩn quốc tế cho tiếng Việt) & Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
+    <?php 
+        $cssFile = dirname(__DIR__, 2) . '/public/assets/css/style.css';
+        $cssVersion = file_exists($cssFile) ? filemtime($cssFile) : time();
+    ?>
+    <link rel="stylesheet" href="<?= url('assets/css/style.css?v=' . $cssVersion) ?>">
 
     <!-- Cấu hình ứng dụng & Map API Key từ .env -->
     <script>

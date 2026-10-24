@@ -19,6 +19,7 @@ CREATE TABLE `nguoi_dung` (
   `so_dien_thoai` VARCHAR(15) DEFAULT NULL,
   `anh_dai_dien` VARCHAR(255) DEFAULT NULL,
   `vai_tro` ENUM('admin', 'khach_hang') NOT NULL DEFAULT 'khach_hang',
+  `diem_tich_luy` INT UNSIGNED NOT NULL DEFAULT 0,
   `trang_thai` ENUM('hoat_dong', 'bi_khoa') NOT NULL DEFAULT 'hoat_dong',
   `ngay_tao` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `ngay_cap_nhat` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -60,6 +61,8 @@ CREATE TABLE `dia_diem` (
   `ngay_tao` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `ngay_cap_nhat` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
+  FULLTEXT KEY `ft_tim_kiem` (`ten_dia_diem`, `dia_chi`, `mo_ta_ngan`),
+  KEY `idx_dia_diem_trang_thai_luot_xem` (`trang_thai`, `luot_xem` DESC),
   CONSTRAINT `chk_dia_diem_gia` CHECK (`gia_thap_nhat` >= 0 AND `gia_cao_nhat` >= `gia_thap_nhat`),
   CONSTRAINT `chk_dia_diem_toa_do` CHECK (`vi_do` BETWEEN -90.00000000 AND 90.00000000 AND `kinh_do` BETWEEN -180.00000000 AND 180.00000000),
   CONSTRAINT `fk_dia_diem_danh_muc` FOREIGN KEY (`danh_muc_id`) REFERENCES `danh_muc` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
@@ -177,6 +180,7 @@ CREATE TABLE `danh_gia` (
   `dia_diem_id` BIGINT UNSIGNED NOT NULL,
   `so_sao` TINYINT UNSIGNED NOT NULL,
   `noi_dung` TEXT NOT NULL,
+  `hinh_anh` TEXT DEFAULT NULL,
   `trang_thai` ENUM('da_duyet', 'da_an') NOT NULL DEFAULT 'da_duyet',
   `ngay_tao` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -184,6 +188,39 @@ CREATE TABLE `danh_gia` (
   CONSTRAINT `chk_danh_gia_so_sao` CHECK (`so_sao` BETWEEN 1 AND 5),
   CONSTRAINT `fk_danh_gia_nguoi_dung` FOREIGN KEY (`nguoi_dung_id`) REFERENCES `nguoi_dung` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_danh_gia_dia_diem` FOREIGN KEY (`dia_diem_id`) REFERENCES `dia_diem` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 11. BANG YEU_THICH (WISHLIST)
+DROP TABLE IF EXISTS `yeu_thich`;
+CREATE TABLE `yeu_thich` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `nguoi_dung_id` BIGINT UNSIGNED NOT NULL,
+  `dia_diem_id` BIGINT UNSIGNED NOT NULL,
+  `ngay_tao` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_nguoidung_diadiem_yeuthich` (`nguoi_dung_id`, `dia_diem_id`),
+  CONSTRAINT `fk_yeuthich_nguoidung` FOREIGN KEY (`nguoi_dung_id`) REFERENCES `nguoi_dung` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_yeuthich_dia_diem` FOREIGN KEY (`dia_diem_id`) REFERENCES `dia_diem` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 12. BANG CHECK_IN_DIA_DIEM (GAMIFICATION & DIGITAL PASSPORT)
+DROP TABLE IF EXISTS `check_in_dia_diem`;
+CREATE TABLE `check_in_dia_diem` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `nguoi_dung_id` BIGINT UNSIGNED NOT NULL,
+  `dia_diem_id` BIGINT UNSIGNED NOT NULL,
+  `vi_do_checkin` DECIMAL(10, 8) DEFAULT NULL,
+  `kinh_do_checkin` DECIMAL(11, 8) DEFAULT NULL,
+  `khoang_cach_m` INT UNSIGNED DEFAULT NULL,
+  `diem_thuong` INT UNSIGNED NOT NULL DEFAULT 50,
+  `ghi_chu` VARCHAR(255) DEFAULT NULL,
+  `ngay_check_in` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_checkin_user` (`nguoi_dung_id`),
+  KEY `idx_checkin_location` (`dia_diem_id`),
+  KEY `idx_checkin_date` (`ngay_check_in`),
+  CONSTRAINT `fk_checkin_user` FOREIGN KEY (`nguoi_dung_id`) REFERENCES `nguoi_dung` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_checkin_location` FOREIGN KEY (`dia_diem_id`) REFERENCES `dia_diem` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

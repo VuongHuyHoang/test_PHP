@@ -1,17 +1,28 @@
 {
-  "intelephense.diagnostics.undefinedVariables": false,
+  "intelephense.diagnostics.undefinedVariables": "off",
   "intelephense.diagnostics.undefinedTypes": false,
+  "intelephense.diagnostics.undefinedFunctions": false,
+  "intelephense.diagnostics.undefinedConstants": false,
+  "intelephense.diagnostics.undefinedClassConstants": false,
+  "intelephense.diagnostics.undefinedMethods": false,
+  "intelephense.diagnostics.undefinedProperties": false,
+  "intelephense.diagnostics.unusedSymbols": false,
+  "intelephense.diagnostics.embeddedLanguages": false,
+  "intelephense.diagnostics.typeErrors": false,
   "intelephense.environment.includePaths": [
+    ".",
     "app",
-    "views"
+    "views",
+    "database"
   ],
   "intelephense.files.exclude": [
     "**/.git/**",
     "**/scratch/**",
     "**/node_modules/**"
   ],
+  "html.validate.scripts": false,
+  "javascript.validate.enable": false,
   "files.associations": {
     "*.php": "php"
   }
 }
-

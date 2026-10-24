@@ -1,10 +1,14 @@
 <?php
 /**
+ * @var string $title
  * @var array $locations
  * @var array $categories
  * @var string|null $tuKhoa
  * @var string|null $loai
  * @var int|null $danhMucId
+ * @var int|null $page
+ * @var int|null $perPage
+ * @var int|null $totalLocations
  */
 require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
 ?>
@@ -63,7 +67,7 @@ require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
 <!-- Bảng Danh Sách Địa Điểm -->
 <div class="card border-0 shadow-sm rounded-4">
     <div class="card-header bg-white py-3 border-0">
-        <h5 class="fw-bold mb-0 text-dark">Danh Sách Địa Điểm (<?= count($locations) ?> điểm)</h5>
+        <h5 class="fw-bold mb-0 text-dark">Danh Sách Địa Điểm (<?= number_format($totalLocations ?? count($locations)) ?> điểm)</h5>
     </div>
 
     <div class="table-responsive">
@@ -92,7 +96,7 @@ require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
                     <?php foreach ($locations as $loc): ?>
                         <tr>
                             <td>
-                                <img src="<?= str_starts_with($loc['anh_dai_dien'], 'http') ? $loc['anh_dai_dien'] : url($loc['anh_dai_dien']) ?>"
+                                <img src="<?= htmlspecialchars(hinh_anh($loc['anh_dai_dien'])) ?>"
                                     alt="<?= htmlspecialchars($loc['ten_dia_diem']) ?>"
                                     class="rounded-3 shadow-sm object-fit-cover"
                                     style="width: 55px; height: 55px;">
@@ -144,6 +148,7 @@ require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <form action="<?= url('admin/locations/delete/' . $loc['id']) ?>" method="POST" onsubmit="return confirm('Bạn có chắc muốn xóa hoặc ẩn địa điểm này?');">
+                                        <?= csrf_field() ?>
                                         <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill" title="Xóa / Ẩn">
                                             <i class="bi bi-trash"></i>
                                         </button>
@@ -155,6 +160,11 @@ require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
                 <?php endif; ?>
             </tbody>
         </table>
+    </div>
+
+    <!-- Phân Trang Dữ Liệu -->
+    <div class="pb-3">
+        <?= phan_trang($totalLocations ?? count($locations), $perPage ?? 10, $page ?? 1, 'admin/locations', $_GET) ?>
     </div>
 </div>
 

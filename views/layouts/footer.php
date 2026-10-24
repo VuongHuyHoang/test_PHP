@@ -58,8 +58,17 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Leaflet.js JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- Leaflet MarkerCluster JS -->
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <!-- Custom JS -->
-<script src="<?= url('assets/js/main.js') ?>"></script>
+<?php
+$jsFile = dirname(__DIR__, 2) . '/public/assets/js/main.js';
+$jsVersion = file_exists($jsFile) ? filemtime($jsFile) : time();
+?>
+<script src="<?= url('assets/js/main.js?v=' . $jsVersion) ?>"></script>
+
+<!-- Trợ Lý AI Tour Floating Widget -->
+<?php require_once __DIR__ . '/ai_floating_widget.php'; ?>
 </body>
 </html>
 

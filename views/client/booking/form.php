@@ -1,9 +1,21 @@
-<?php require_once dirname(__DIR__, 2) . '/layouts/header.php'; ?>
+<?php
+/**
+ * @var string $title
+ * @var array $goiVe
+ */
+require_once dirname(__DIR__, 2) . '/layouts/header.php';
+?>
 <?php require_once dirname(__DIR__, 2) . '/layouts/navbar.php'; ?>
 
 <main class="container my-5 flex-grow-1">
     <div class="row justify-content-center">
         <div class="col-lg-8">
+            <!-- Stepper Tiến Trình Đặt Vé (Bước 1/3) -->
+            <?php 
+            $currentStep = 1;
+            include __DIR__ . '/_stepper.php'; 
+            ?>
+
             <div class="card border-0 shadow-sm p-4 rounded-4">
                 <div class="border-bottom pb-3 mb-4">
                     <span class="badge bg-success-subtle text-success fw-bold text-uppercase px-3 py-1 rounded-pill">Đặt vé trực tuyến</span>
@@ -12,6 +24,7 @@
                 </div>
 
                 <form action="<?= url('booking/submit') ?>" method="POST" id="bookingForm">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="goi_ve_id" value="<?= (int)$goiVe['id'] ?>">
                     
                     <div class="row g-3 mb-4">

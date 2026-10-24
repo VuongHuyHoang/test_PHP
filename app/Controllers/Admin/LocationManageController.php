@@ -25,22 +25,30 @@ class LocationManageController
         $tuKhoa = trim($_GET['q'] ?? '');
         $danhMucId = (int)($_GET['danh_muc_id'] ?? 0);
         $loai = trim($_GET['loai'] ?? '');
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 10;
 
-        $locations = $this->diaDiemModel->danhSachAdmin([
+        $filters = [
             'tu_khoa'     => $tuKhoa,
             'danh_muc_id' => $danhMucId ?: null,
             'loai'        => $loai ?: null,
-        ]);
+        ];
+
+        $totalLocations = $this->diaDiemModel->demAdmin($filters);
+        $locations = $this->diaDiemModel->danhSachAdmin($filters, $page, $perPage);
 
         $categories = $this->danhMucModel->tatCa();
 
         view('admin.locations.index', [
-            'title'      => 'Quản Lý Địa Điểm Du Lịch & Ẩm Thực',
-            'locations'  => $locations,
-            'categories' => $categories,
-            'tuKhoa'     => $tuKhoa,
-            'danhMucId'  => $danhMucId,
-            'loai'       => $loai,
+            'title'          => 'Quản Lý Địa Điểm Du Lịch & Ẩm Thực',
+            'locations'      => $locations,
+            'categories'     => $categories,
+            'tuKhoa'         => $tuKhoa,
+            'danhMucId'      => $danhMucId,
+            'loai'           => $loai,
+            'page'           => $page,
+            'perPage'        => $perPage,
+            'totalLocations' => $totalLocations,
         ]);
     }
 
@@ -62,6 +70,12 @@ class LocationManageController
     public function create(): void
     {
         AuthMiddleware::checkAdmin();
+
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ.');
+            redirect(url('admin/locations/create'));
+            return;
+        }
 
         $ten = trim($_POST['ten_dia_diem'] ?? '');
         $danhMucId = (int)($_POST['danh_muc_id'] ?? 0);
@@ -162,6 +176,12 @@ class LocationManageController
         AuthMiddleware::checkAdmin();
         $id = (int)$id;
 
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ.');
+            redirect(url('admin/locations/edit/' . $id));
+            return;
+        }
+
         $location = $this->diaDiemModel->timTheoId($id);
         if (!$location) {
             flash('error', 'Địa điểm không tồn tại.');
@@ -234,6 +254,13 @@ class LocationManageController
     public function delete(string|int $id): void
     {
         AuthMiddleware::checkAdmin();
+
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ.');
+            redirect(url('admin/locations'));
+            return;
+        }
+
         $id = (int)$id;
 
         try {
@@ -249,8 +276,16 @@ class LocationManageController
     public function deleteImage(): void
     {
         AuthMiddleware::checkAdmin();
-        $imageId = (int)($_POST['image_id'] ?? 0);
+
         $locationId = (int)($_POST['location_id'] ?? 0);
+
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ.');
+            redirect(url('admin/locations/edit/' . $locationId));
+            return;
+        }
+
+        $imageId = (int)($_POST['image_id'] ?? 0);
 
         if ($imageId > 0) {
             $this->diaDiemModel->xoaHinhAnh($imageId);
@@ -263,9 +298,29 @@ class LocationManageController
     private function uploadImage(array $file): ?string
     {
         $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
         if (!in_array($ext, $allowed) || $file['error'] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+
+        // Giới hạn kích thước file <= 5MB
+        if (!empty($file['size']) && $file['size'] > 5 * 1024 * 1024) {
+            return null;
+        }
+
+        // Xác thực MIME type thực tế của tệp
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        if (!in_array($mime, $allowedMimes)) {
+            return null;
+        }
+
+        // Xác thực là ảnh hợp lệ
+        if (!@getimagesize($file['tmp_name'])) {
             return null;
         }
 
@@ -274,7 +329,7 @@ class LocationManageController
             mkdir($uploadDir, 0755, true);
         }
 
-        $newName = 'loc_' . date('Ymd_His') . '_' . rand(100, 999) . '.' . $ext;
+        $newName = 'loc_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
         $dest = $uploadDir . '/' . $newName;
 
         if (move_uploaded_file($file['tmp_name'], $dest)) {

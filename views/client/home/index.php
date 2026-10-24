@@ -114,6 +114,87 @@ require_once dirname(__DIR__, 2) . '/layouts/header.php';
 </section>
 
 <!-- ========================================================
+     1.1. WIDGET THỜI TIẾT BIỂN & THỦY TRIỀU NHA TRANG (MARINE WEATHER & TIDE)
+     ======================================================== -->
+<?php if (!empty($weather)): ?>
+<section class="container my-4">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white border">
+        <div class="card-body p-3 p-lg-4">
+            <div class="row g-3 align-items-center">
+                <!-- Cột 1: Nhiệt độ & Thời tiết hiện tại -->
+                <div class="col-lg-3 col-md-6 border-end">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="p-3 rounded-circle bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center" style="width: 58px; height: 58px; flex-shrink: 0;">
+                            <i class="bi <?= htmlspecialchars($weather['icon'] ?? 'bi-sun-fill text-warning') ?> fs-2"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-baseline gap-2">
+                                <h2 class="fw-bold mb-0 text-dark"><?= $weather['temp'] ?? 29 ?>°C</h2>
+                                <span class="text-muted small">Cảm giác: <?= $weather['feel'] ?? 31 ?>°C</span>
+                            </div>
+                            <div class="fw-semibold text-dark small">
+                                <?= htmlspecialchars($weather['condition_vi']) ?>
+                            </div>
+                            <div class="text-muted" style="font-size: 11px;">
+                                <i class="bi bi-geo-alt-fill text-danger me-1"></i>Vịnh Nha Trang • Cập nhật <?= $weather['updated_at'] ?? date('H:i') ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cột 2: Sóng biển & Gió biển -->
+                <div class="col-lg-3 col-md-6 border-end">
+                    <div class="small text-muted mb-1 fw-semibold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">
+                        <i class="bi bi-water text-info me-1"></i>Tình trạng biển
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge bg-info-subtle text-info border border-info-subtle fw-semibold px-2 py-1">
+                            <i class="bi bi-tsunami me-1"></i>Sóng: <?= htmlspecialchars($weather['wave_height']) ?>
+                        </span>
+                        <span class="badge bg-light text-secondary border fw-medium px-2 py-1">
+                            <i class="bi bi-wind me-1"></i>Gió: <?= htmlspecialchars($weather['wind_speed']) ?> km/h
+                        </span>
+                    </div>
+                    <p class="mb-0 text-success small fw-medium">
+                        <i class="bi bi-shield-check me-1"></i><?= htmlspecialchars($weather['wave_status_vi']) ?>
+                    </p>
+                </div>
+
+                <!-- Cột 3: Lịch Thủy triều trong ngày -->
+                <div class="col-lg-3 col-md-6 border-end">
+                    <div class="small text-muted mb-1 fw-semibold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">
+                        <i class="bi bi-moisture text-primary me-1"></i>Lịch Thủy Triều Hôm Nay
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center small mb-1">
+                        <span class="text-muted">Triều lên (Nước lớn):</span>
+                        <strong class="text-primary"><?= htmlspecialchars($weather['tide_high_1']) ?> & <?= htmlspecialchars($weather['tide_high_2']) ?></strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center small">
+                        <span class="text-muted">Triều rút (Nước ròng):</span>
+                        <strong class="text-secondary"><?= htmlspecialchars($weather['tide_low_1']) ?> & <?= htmlspecialchars($weather['tide_low_2']) ?></strong>
+                    </div>
+                </div>
+
+                <!-- Cột 4: Khuyến nghị du lịch biển -->
+                <div class="col-lg-3 col-md-6">
+                    <div class="p-2 rounded-3 bg-light border">
+                        <div class="d-flex align-items-center gap-1 text-primary fw-semibold small mb-1">
+                            <i class="bi bi-lightbulb-fill text-warning"></i>
+                            <span>Khuyến nghị du lịch biển:</span>
+                        </div>
+                        <p class="text-muted mb-0 lh-sm" style="font-size: 11.5px;">
+                            <?= htmlspecialchars($weather['recommendation_vi']) ?>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+
+<!-- ========================================================
      2. KHÁM PHÁ NHA TRANG THEO SỞ THÍCH (CIRCLE ICONS - AGODA STYLE)
      ======================================================== -->
 <section class="container my-5">

@@ -29,6 +29,39 @@ class TonKhoVe
         return $row ?: null;
     }
 
+    /**
+     * Lấy tồn kho theo gói vé và ngày; nếu chưa có thì tự động khởi tạo theo hạn mức mặc định
+     */
+    public function layHoacTaoTheoGoiVeVaNgay(int $goiVeId, string $ngay, int $defaultQty = 500): ?array
+    {
+        $hienTai = $this->layTheoGoiVeVaNgay($goiVeId, $ngay);
+        if ($hienTai) {
+            return $hienTai;
+        }
+
+        // Chỉ tự sinh tồn kho cho ngày hôm nay hoặc tương lai
+        if ($ngay < date('Y-m-d')) {
+            return null;
+        }
+
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO ton_kho_ve (goi_ve_id, ngay_su_dung, tong_so_ve, so_ve_con_lai)
+                VALUES (:goi_ve_id, :ngay, :tong_so_ve, :so_ve_con_lai)
+            ");
+            $stmt->execute([
+                'goi_ve_id'      => $goiVeId,
+                'ngay'           => $ngay,
+                'tong_so_ve'     => $defaultQty,
+                'so_ve_con_lai'  => $defaultQty
+            ]);
+            return $this->layTheoGoiVeVaNgay($goiVeId, $ngay);
+        } catch (\PDOException $e) {
+            // Trường hợp race condition (đã được tạo bởi request song song)
+            return $this->layTheoGoiVeVaNgay($goiVeId, $ngay);
+        }
+    }
+
     public function timTheoId(int $id): ?array
     {
         $stmt = $this->db->prepare("
@@ -45,7 +78,60 @@ class TonKhoVe
     }
 
     /**
-     * Lấy danh sách tồn kho vé theo ngày cho Admin
+     * Đếm tổng số bản ghi tồn kho theo ngày
+     */
+    public function demDanhSach(?string $ngay = null): int
+    {
+        $sql = "
+            SELECT COUNT(tk.id)
+            FROM ton_kho_ve tk
+            JOIN goi_ve gv ON tk.goi_ve_id = gv.id
+            JOIN dia_diem dd ON gv.dia_diem_id = dd.id
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if (!empty($ngay)) {
+            $sql .= " AND tk.ngay_su_dung = :ngay";
+            $params['ngay'] = $ngay;
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return (int)$stmt->fetchColumn();
+    }
+
+    /**
+     * Lấy danh sách tồn kho vé theo ngày có phân trang cho Admin
+     */
+    public function layDanhSachPhanTrang(int $page = 1, int $perPage = 10, ?string $ngay = null): array
+    {
+        $sql = "
+            SELECT tk.*, gv.ten_goi_ve, gv.gia_nguoi_lon, gv.gia_tre_em, dd.ten_dia_diem
+            FROM ton_kho_ve tk
+            JOIN goi_ve gv ON tk.goi_ve_id = gv.id
+            JOIN dia_diem dd ON gv.dia_diem_id = dd.id
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if (!empty($ngay)) {
+            $sql .= " AND tk.ngay_su_dung = :ngay";
+            $params['ngay'] = $ngay;
+        }
+
+        $page = max(1, $page);
+        $offset = ($page - 1) * $perPage;
+
+        $sql .= " ORDER BY tk.ngay_su_dung DESC, dd.ten_dia_diem ASC LIMIT " . (int)$perPage . " OFFSET " . (int)$offset;
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Lấy danh sách tồn kho vé theo ngày cho Admin (Backward-compatible)
      */
     public function layDanhSach(int $limit = 50, ?string $ngay = null): array
     {

@@ -1,5 +1,6 @@
 <?php
 /**
+ * @var string $title
  * @var array $diaDiemList
  * @var array $danhMucList
  * @var array $filters
@@ -59,9 +60,22 @@ require_once dirname(__DIR__, 2) . '/layouts/navbar.php';
             <button type="button" class="chip-btn <?= !empty($filters['co_ban_ve']) ? 'active' : '' ?>" data-filter-chip="co_ban_ve">
                 <i class="bi bi-ticket-perforated me-1 text-success"></i>Có vé online E-Voucher
             </button>
+            <button type="button" class="chip-btn <?= !empty($filters['dang_mo_cua']) ? 'active' : '' ?>" data-filter-chip="dang_mo_cua">
+                <i class="bi bi-clock-fill me-1 text-warning"></i>Đang mở cửa
+            </button>
             <button type="button" class="chip-btn" id="btn-locate-me">
                 <i class="bi bi-crosshair me-1 text-primary"></i>Gần vị trí của tôi
             </button>
+        </div>
+
+        <!-- Thanh Chọn Bán Kính Định Vị GPS Quanh Người Dùng (Radius Filter) -->
+        <div class="radius-filter-wrapper d-none align-items-center gap-2 mt-2 pt-2 border-top flex-wrap bg-light p-2 rounded-3" id="radiusFilterBar">
+            <span class="small fw-bold text-primary me-1"><i class="bi bi-broadcast-pin me-1"></i>Bán kính quanh bạn:</span>
+            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-0.5 small radius-chip" data-radius="1000">1 km</button>
+            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-0.5 small radius-chip active" data-radius="3000">3 km</button>
+            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-0.5 small radius-chip" data-radius="5000">5 km</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-0.5 small radius-chip" data-radius="all">Tất cả</button>
+            <span class="small text-muted ms-2" id="radiusResultText" style="font-size: 11.5px;"></span>
         </div>
 
         <!-- Khung Bộ Lọc Nâng Cao (Collapse) -->
@@ -113,6 +127,12 @@ require_once dirname(__DIR__, 2) . '/layouts/navbar.php';
                                 <input class="form-check-input" type="checkbox" name="co_ban_ve" value="1" id="checkCoBanVe" <?= (!empty($filters['co_ban_ve'])) ? 'checked' : '' ?>>
                                 <label class="form-check-label small fw-semibold text-dark" for="checkCoBanVe">
                                     Có vé online
+                                </label>
+                            </div>
+                            <div class="form-check mb-1">
+                                <input class="form-check-input" type="checkbox" name="dang_mo_cua" value="1" id="checkDangMoCua" <?= (!empty($filters['dang_mo_cua'])) ? 'checked' : '' ?>>
+                                <label class="form-check-label small fw-semibold text-success" for="checkDangMoCua">
+                                    <i class="bi bi-circle-fill me-1" style="font-size: 8px;"></i>Đang mở cửa
                                 </label>
                             </div>
                         </div>
@@ -169,7 +189,7 @@ require_once dirname(__DIR__, 2) . '/layouts/navbar.php';
                     <div class="col-md-6 col-sm-12" id="card-location-<?= $dd['id'] ?>">
                         <div class="location-card-modern" onclick="focusOnMap(<?= $dd['id'] ?>, <?= $dd['vi_do'] ?>, <?= $dd['kinh_do'] ?>)" style="cursor: pointer;">
                             <div class="location-card-img-wrap">
-                                <img src="<?= htmlspecialchars($dd['anh_dai_dien']) ?>" class="location-card-img" alt="<?= htmlspecialchars($dd['ten_dia_diem']) ?>" loading="lazy">
+                                <img src="<?= htmlspecialchars(hinh_anh($dd['anh_dai_dien'])) ?>" class="location-card-img" alt="<?= htmlspecialchars($dd['ten_dia_diem']) ?>" loading="lazy">
                                 <span class="card-category-glass <?= $catBadgeClass ?>">
                                     <?= $loaiLabel ?> &bull; <?= htmlspecialchars($dd['ten_danh_muc']) ?>
                                 </span>
@@ -200,8 +220,11 @@ require_once dirname(__DIR__, 2) . '/layouts/navbar.php';
                                         <?= \App\Helpers\FormatHelper::tienTe((float)$dd['gia_thap_nhat']) ?> - <?= \App\Helpers\FormatHelper::tienTe((float)$dd['gia_cao_nhat']) ?>
                                     </span>
                                     <div class="d-flex gap-1" onclick="event.stopPropagation();">
-                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-1" onclick="focusOnMap(<?= $dd['id'] ?>, <?= $dd['vi_do'] ?>, <?= $dd['kinh_do'] ?>)" title="Xem vị trí trên bản đồ">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-2 py-1" onclick="focusOnMap(<?= $dd['id'] ?>, <?= $dd['vi_do'] ?>, <?= $dd['kinh_do'] ?>)" title="Xem vị trí trên bản đồ">
                                             <i class="bi bi-geo-alt"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-1" onclick="window.startMapRouting(<?= $dd['vi_do'] ?>, <?= $dd['kinh_do'] ?>, '<?= addslashes(htmlspecialchars($dd['ten_dia_diem'])) ?>')" title="Chỉ đường OSRM nội bộ">
+                                            <i class="bi bi-sign-turn-right-fill"></i>
                                         </button>
                                         <a href="<?= url('dia-diem/' . $dd['duong_dan']) ?>" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold">
                                             Chi tiết

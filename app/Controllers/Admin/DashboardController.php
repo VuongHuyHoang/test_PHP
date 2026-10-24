@@ -99,4 +99,16 @@ class DashboardController
             'chartStatusData'   => json_encode(array_values($statusCounts)),
         ]);
     }
+
+    /**
+     * Trang tài liệu hướng dẫn vận hành hệ thống Dashboard Admin
+     */
+    public function guide(): void
+    {
+        AuthMiddleware::checkAdmin();
+
+        view('admin.dashboard.guide', [
+            'title' => 'Hướng Dẫn Sử Dụng Admin Dashboard',
+        ]);
+    }
 }

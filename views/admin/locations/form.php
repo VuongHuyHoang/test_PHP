@@ -1,5 +1,6 @@
 <?php
 /**
+ * @var string $title
  * @var string $mode
  * @var array|null $location
  * @var array $categories
@@ -26,6 +27,7 @@ $actionUrl = $isEdit ? url('admin/locations/edit/' . $location['id']) : url('adm
 </div>
 
 <form action="<?= $actionUrl ?>" method="POST" enctype="multipart/form-data">
+    <?= csrf_field() ?>
     <div class="row g-4">
         <!-- Cột Thông Tin Cơ Bản (Bên trái) -->
         <div class="col-lg-8">
@@ -153,7 +155,7 @@ $actionUrl = $isEdit ? url('admin/locations/edit/' . $location['id']) : url('adm
 
                 <?php if ($isEdit && !empty($location['anh_dai_dien'])): ?>
                     <div class="mb-3 text-center">
-                        <img src="<?= str_starts_with($location['anh_dai_dien'], 'http') ? $location['anh_dai_dien'] : url($location['anh_dai_dien']) ?>" 
+                        <img src="<?= htmlspecialchars(hinh_anh($location['anh_dai_dien'])) ?>" 
                              alt="Ảnh hiện tại" class="img-fluid rounded-3 shadow-sm" style="max-height: 180px; object-fit: cover;">
                         <div class="small text-muted mt-1">Ảnh đại diện hiện tại</div>
                     </div>
@@ -179,7 +181,7 @@ $actionUrl = $isEdit ? url('admin/locations/edit/' . $location['id']) : url('adm
                     <div class="row g-2 mb-3">
                         <?php foreach ($gallery as $img): ?>
                             <div class="col-4 position-relative">
-                                <img src="<?= str_starts_with($img['duong_dan_anh'], 'http') ? $img['duong_dan_anh'] : url($img['duong_dan_anh']) ?>" 
+                                <img src="<?= htmlspecialchars(hinh_anh($img['duong_dan_anh'])) ?>" 
                                      alt="Gallery" class="rounded w-100 object-fit-cover" style="height: 70px;">
                             </div>
                         <?php endforeach; ?>

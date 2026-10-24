@@ -1,31 +1,139 @@
+/* ========================================================
+   UI/UX PRO MAX DESIGN SYSTEM TOKENS - NHA TRANG TOURISM
+   ======================================================== */
 :root {
-    --coastal-deep: #0b2545;
-    --coastal-teal: #137a8e;
-    --coastal-teal-hover: #0e6070;
-    --warm-coral: #d95338;
-    --warm-coral-hover: #be432a;
-    --sand-bg: #f8f6f0;
+    /* Brand & Primary Palette (Aurora Coastal Ocean) */
+    --color-primary: #0284c7;
+    --color-primary-hover: #0369a1;
+    --color-secondary: #0ea5e9;
+    --color-secondary-light: #e0f2fe;
+    --color-accent: #ea580c;
+    --color-accent-hover: #c2410c;
+    
+    /* Semantic Surfaces & Backgrounds */
+    --color-background: #f8fafc;
+    --color-card: #ffffff;
+    --color-foreground: #0f172a;
+    --color-text-secondary: #334155;
+    --color-muted: #64748b;
+    --color-muted-bg: #f1f5f9;
+    --color-border: #e2e8f0;
+    --color-border-subtle: #cbd5e1;
+    --color-border-focus: #38bdf8;
+    
+    /* Legacy Semantic Mapping for Consistency */
+    --coastal-deep: #0b1f3a;
+    --coastal-teal: #0284c7;
+    --coastal-teal-hover: #0369a1;
+    --warm-coral: #ea580c;
+    --warm-coral-hover: #c2410c;
+    --sand-bg: #f8fafc;
     --card-bg: #ffffff;
-    --border-sand: #e5e0d4;
-    --text-main: #1a2233;
+    --border-sand: #e2e8f0;
+    --text-main: #0f172a;
     --text-muted: #64748b;
+    
+    /* Spacing System (8px Grid) */
+    --space-2xs: 2px;
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+    --space-3xl: 64px;
+
+    /* Radius Scale */
+    --radius-sm: 8px;
     --radius-md: 12px;
-    --radius-lg: 16px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
     --radius-full: 9999px;
+
+    /* Multi-layered Soft Elevation Scale */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 12px rgba(11, 37, 69, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03);
+    --shadow-lg: 0 10px 28px rgba(11, 37, 69, 0.08), 0 3px 6px rgba(0, 0, 0, 0.04);
+    --shadow-xl: 0 20px 40px rgba(11, 37, 69, 0.12), 0 6px 12px rgba(0, 0, 0, 0.06);
+
+    /* Animation Timing */
+    --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-smooth: 350ms cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Typography */
+    --font-sans: 'Be Vietnam Pro', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Base Body Styling */
 body {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--sand-bg);
-    color: var(--text-main);
+    font-family: var(--font-sans);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
     line-height: 1.6;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Accessibility & Anti-Pattern Rules */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* Visible focus rings for keyboard navigation (WCAG 2.2 AA) */
+:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Cursor pointer on all clickable controls */
+button,
+.btn,
+[role="button"],
+.chip-btn,
+.filter-chip,
+.agoda-tab-btn,
+.circle-cat-item,
+.location-card-modern,
+.activity-item-card,
+.gallery-thumb,
+.clickable-item,
+a.badge {
+    cursor: pointer;
+}
+
+/* Balanced Headings (No orphan words) */
+h1, h2, h3, h4, h5, h6,
+.hero-heading,
+.agoda-hero-title {
+    text-wrap: balance;
+    letter-spacing: -0.02em;
+}
+
+/* Respect Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 /* Navbar */
 .site-navbar {
-    background-color: var(--coastal-deep);
+    background: rgba(11, 31, 58, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    transition: background-color var(--transition-normal), box-shadow var(--transition-normal);
+    z-index: 1050 !important;
+}
+
+.site-navbar .dropdown-menu {
+    z-index: 1060 !important;
 }
 
 .brand-title {
@@ -35,20 +143,42 @@ body {
     letter-spacing: -0.02em;
 }
 
-.nav-link-custom {
-    color: rgba(255, 255, 255, 0.78);
-    font-weight: 500;
-    font-size: 0.935rem;
-    transition: color 0.2s ease;
+.site-navbar .navbar-nav {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
 }
 
-.nav-link-custom:hover, .nav-link-custom.active {
+.site-navbar .navbar-nav .nav-item {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+}
+
+.nav-link-custom,
+.site-navbar .navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.88);
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 6px 10px !important;
+    border-radius: var(--radius-full);
+    transition: all var(--transition-fast);
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+}
+
+.nav-link-custom:hover, .nav-link-custom.active,
+.site-navbar .navbar-nav .nav-link:hover, .site-navbar .navbar-nav .nav-link.active {
     color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.12);
 }
 
 /* Hero Section */
 .hero-section {
-    background: linear-gradient(180deg, var(--coastal-deep) 0%, #10375c 100%);
+    background: linear-gradient(180deg, var(--coastal-deep) 0%, #0369a1 100%);
     color: #ffffff;
     padding: 72px 0 54px 0;
 }
@@ -64,7 +194,7 @@ body {
 
 .hero-subtitle {
     font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.82);
+    color: rgba(255, 255, 255, 0.88);
     max-width: 620px;
     margin: 0 auto 32px auto;
 }
@@ -315,33 +445,37 @@ body {
 }
 
 /* ========================================================
-   AGODA-INSPIRED HOMEPAGE COMPONENTS
+   AGODA-INSPIRED HOMEPAGE COMPONENTS (ENHANCED FOR UI/UX PRO MAX)
    ======================================================== */
 
-/* Agoda Hero with Panoramic Coastline */
+/* Agoda Hero with Aurora & Ocean Horizon */
 .agoda-hero {
     position: relative;
-    background: linear-gradient(rgba(11, 37, 69, 0.45), rgba(11, 37, 69, 0.65)), 
+    background: linear-gradient(180deg, rgba(11, 31, 58, 0.78) 0%, rgba(2, 132, 199, 0.65) 55%, rgba(11, 31, 58, 0.92) 100%), 
                 url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
-    padding: 60px 0 90px 0;
+    padding: 72px 0 100px 0;
     color: #ffffff;
 }
 
 .agoda-hero-title {
-    font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+    font-size: clamp(2rem, 3.8vw, 2.75rem);
     font-weight: 800;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-    letter-spacing: -0.02em;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    letter-spacing: -0.025em;
+    line-height: 1.2;
 }
 
 /* Floating Agoda Search Card */
 .agoda-search-card {
     background: #ffffff;
     border-radius: 20px;
-    box-shadow: 0 16px 40px rgba(11, 37, 69, 0.16);
+    box-shadow: 0 20px 40px -10px rgba(11, 37, 69, 0.18), 0 4px 10px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(226, 232, 240, 0.9);
     padding: 24px;
-    margin-top: 24px;
-    color: var(--text-main);
+    margin-top: 28px;
+    color: var(--color-foreground);
+    position: relative;
+    z-index: 20;
 }
 
 .agoda-tab-btn {
@@ -349,55 +483,58 @@ body {
     background: transparent;
     font-weight: 600;
     color: #64748b;
-    padding: 10px 18px;
-    border-radius: 999px;
+    padding: 10px 20px;
+    border-radius: 9999px;
     font-size: 0.95rem;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast);
+    cursor: pointer;
 }
 
 .agoda-tab-btn:hover {
-    color: var(--coastal-teal);
-    background: #f1f5f9;
+    color: var(--color-primary);
+    background: #f0f9ff;
 }
 
 .agoda-tab-btn.active {
     background: #e0f2fe;
     color: #0284c7;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.15);
 }
 
 .search-field-box {
     border: 1.5px solid #e2e8f0;
     border-radius: 12px;
     padding: 8px 14px;
-    transition: border-color 0.2s ease;
+    transition: all var(--transition-fast);
     background: #ffffff;
 }
 
 .search-field-box:focus-within {
     border-color: #0284c7;
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 
 /* Agoda Spotlight Cards (Large Photo Overlay) */
 .agoda-spotlight-card {
     position: relative;
-    border-radius: 16px;
+    border-radius: 18px;
     overflow: hidden;
-    height: 280px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 290px;
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+    cursor: pointer;
 }
 
 .agoda-spotlight-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+    box-shadow: var(--shadow-xl);
 }
 
 .agoda-spotlight-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.5s ease;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .agoda-spotlight-card:hover .agoda-spotlight-img {
@@ -407,11 +544,11 @@ body {
 .agoda-spotlight-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.1) 30%, rgba(11, 37, 69, 0.9) 100%);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.05) 20%, rgba(11, 31, 58, 0.9) 100%);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: 20px;
+    padding: 22px;
     color: #ffffff;
 }
 
@@ -421,13 +558,14 @@ body {
     flex-direction: column;
     align-items: center;
     text-decoration: none;
-    color: var(--text-main);
-    transition: transform 0.2s ease;
+    color: var(--color-foreground);
+    transition: transform var(--transition-normal);
+    cursor: pointer;
 }
 
 .circle-cat-item:hover {
     transform: translateY(-4px);
-    color: var(--coastal-teal);
+    color: var(--color-primary);
 }
 
 .circle-cat-icon {
@@ -435,54 +573,63 @@ body {
     height: 68px;
     border-radius: 50%;
     background: #ffffff;
-    box-shadow: 0 4px 14px rgba(11, 37, 69, 0.08);
+    box-shadow: 0 4px 14px rgba(11, 37, 69, 0.07);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 26px;
     margin-bottom: 8px;
     border: 1px solid #e2e8f0;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast);
 }
 
 .circle-cat-item:hover .circle-cat-icon {
     background: #e0f2fe;
     border-color: #38bdf8;
     color: #0284c7;
+    box-shadow: 0 6px 18px rgba(2, 132, 199, 0.2);
 }
 
 /* Agoda Promo Banner Cards */
 .agoda-promo-banner {
-    border-radius: 16px;
-    padding: 24px;
+    border-radius: 18px;
+    padding: 26px;
     color: #ffffff;
     position: relative;
     overflow: hidden;
-    min-height: 160px;
+    min-height: 170px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.agoda-promo-banner:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
 }
 
 .promo-banner-1 {
-    background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
-}
-
-.promo-banner-2 {
     background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
 }
 
-.promo-banner-3 {
+.promo-banner-2 {
     background: linear-gradient(135deg, #ea580c 0%, #f59e0b 100%);
+}
+
+.promo-banner-3 {
+    background: linear-gradient(135deg, #4f46e5 0%, #0284c7 100%);
 }
 
 /* Activity & Food Card enhancements */
 .activity-item-card {
     background: #ffffff;
-    border-radius: 16px;
+    border-radius: 18px;
     overflow: hidden;
     border: 1px solid #e2e8f0;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -490,13 +637,36 @@ body {
 
 .activity-item-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 10px 24px rgba(11, 37, 69, 0.08);
+    border-color: #38bdf8;
+    box-shadow: var(--shadow-lg);
 }
 
 .activity-thumb {
     width: 100%;
-    height: 190px;
+    height: 195px;
     object-fit: cover;
+}
+
+/* Line Clamp Utilities */
+.line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 /* ========================================================
@@ -728,4 +898,407 @@ body {
         gap: 8px;
     }
 }
+
+/* ========================================================
+   LEAFLET POPUP & MAP STACKING CONTEXT FIXES
+   ======================================================== */
+
+/* Đảm bảo chữ nút trong popup bản đồ luôn màu trắng sáng, tương phản cao */
+.leaflet-popup-content a.btn,
+.leaflet-popup-content .btn-primary,
+.leaflet-container .leaflet-popup-content a.btn,
+.leaflet-container .leaflet-popup-content a.btn-primary {
+    color: #ffffff !important;
+    text-decoration: none !important;
+    font-weight: 600 !important;
+}
+
+.leaflet-popup-content a.btn:hover,
+.leaflet-popup-content .btn-primary:hover {
+    color: #ffffff !important;
+    opacity: 0.92;
+}
+
+/* Cô lập stacking context bản đồ trang chi tiết để không đè lên navbar */
+#detail-map {
+    position: relative;
+    z-index: 1;
+    isolation: isolate;
+}
+
+.detail-sticky-sidebar {
+    position: sticky;
+    top: 85px;
+    z-index: 20;
+}
+
+/* ========================================================
+   STICKY BOOKING BAR & CARD STYLING (OTA PRO UX)
+   ======================================================== */
+.sticky-booking-card {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+    border: 1px solid rgba(25, 135, 84, 0.2) !important;
+}
+
+.sticky-booking-card:hover {
+    box-shadow: 0 10px 25px rgba(25, 135, 84, 0.15) !important;
+}
+
+#mobile-sticky-booking-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1039;
+    background: rgba(255, 255, 255, 0.96) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+    transform: translateY(110%);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s;
+}
+
+#mobile-sticky-booking-bar.show-bar {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+@keyframes bookingSectionPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.6);
+        border-color: #198754;
+    }
+    50% {
+        box-shadow: 0 0 0 14px rgba(25, 135, 84, 0);
+        border-color: #198754;
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(25, 135, 84, 0);
+    }
+}
+
+.booking-highlight {
+    animation: bookingSectionPulse 1.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    border: 2px solid #198754 !important;
+}
+
+@media (max-width: 991.98px) {
+    body.has-mobile-booking-bar {
+        padding-bottom: 76px;
+    }
+    body.has-mobile-booking-bar .ai-tour-widget-container {
+        bottom: 84px !important;
+        transition: bottom 0.25s ease;
+    }
+}
+
+/* ========================================================
+   PROFILE TABS SINGLE-ROW & NO-FREEZE STYLING
+   ======================================================== */
+#profileTabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    padding-bottom: 2px;
+}
+
+#profileTabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.5rem !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+#profileTabs::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+#profileTabs .nav-item {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+}
+
+#profileTabs .nav-link {
+    white-space: nowrap !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+    word-break: keep-all !important;
+    font-size: 13px !important;
+    padding: 7px 14px !important;
+    transition: all 0.2s ease-in-out;
+}
+
+#profileTabs .nav-link:not(.active) {
+    color: #475569;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+#profileTabs .nav-link:not(.active):hover {
+    color: #0f172a;
+    background-color: #f1f5f9;
+}
+
+#profileTabs .nav-link.active {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25) !important;
+    border: 1px solid transparent !important;
+}
+
+/* ========================================================
+   LIVE AUTO-SUGGEST SEARCH DROPDOWN
+   ======================================================== */
+.live-search-wrapper {
+    position: relative;
+    transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.site-navbar .live-search-input-group {
+    background: rgba(255, 255, 255, 0.16) !important;
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    border-radius: 50rem !important;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: all 0.25s ease;
+}
+
+.site-navbar .live-search-input-group:focus-within,
+.site-navbar .live-search-input-group:hover {
+    background: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.65) !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.35) !important;
+}
+
+.site-navbar .search-glass-icon {
+    background: transparent !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-size: 13.5px;
+    padding-left: 12px;
+}
+
+.site-navbar .live-search-input {
+    background: transparent !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.site-navbar .live-search-input:focus {
+    background: transparent !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+}
+
+.site-navbar .live-search-input::placeholder,
+.placeholder-white::placeholder {
+    color: #ffffff !important;
+    opacity: 0.9 !important;
+    font-weight: 400;
+}
+
+.search-suggest-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 100%;
+    min-width: 340px;
+    max-width: 520px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(15, 23, 42, 0.08);
+    border: 1px solid #e2e8f0;
+    z-index: 1090;
+    overflow: hidden;
+    max-height: 420px;
+    overflow-y: auto;
+    animation: dropdownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.search-suggest-dropdown .suggest-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    text-decoration: none !important;
+    color: #0f172a;
+    transition: background-color 0.15s ease;
+    cursor: pointer;
+}
+
+.search-suggest-dropdown .suggest-item:last-child {
+    border-bottom: none;
+}
+
+.search-suggest-dropdown .suggest-item:hover,
+.search-suggest-dropdown .suggest-item.selected {
+    background-color: #f0f9ff;
+}
+
+.search-suggest-dropdown .suggest-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid #e2e8f0;
+}
+
+.search-suggest-dropdown .suggest-info {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.search-suggest-dropdown .suggest-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search-suggest-dropdown .suggest-meta {
+    font-size: 11.5px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search-suggest-dropdown mark {
+    background: transparent;
+    color: #0284c7;
+    font-weight: 700;
+    padding: 0;
+}
+
+/* ========================================================
+   OSRM TURN-BY-TURN IN-APP ROUTING PANEL
+   ======================================================== */
+.osrm-route-panel {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 1000;
+    width: calc(100% - 28px);
+    max-width: 360px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 16px;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    max-height: 75vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideDownIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDownIn {
+    from {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.osrm-panel-header {
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+}
+
+.osrm-panel-body {
+    padding: 10px 14px;
+    overflow-y: auto;
+    flex-grow: 1;
+    max-height: 380px;
+}
+
+.osrm-step-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px dashed #e2e8f0;
+    font-size: 12.5px;
+}
+
+.osrm-step-item:last-child {
+    border-bottom: none;
+}
+
+.osrm-step-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #e0f2fe;
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    justify-content-center;
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* ========================================================
+   ANIMATION PULSE & GAMIFICATION STAMPS
+   ======================================================== */
+.grayscale-image {
+    filter: grayscale(85%);
+}
+
+.animate-pulse {
+    animation: pulseNotice 1.5s infinite;
+}
+
+@keyframes pulseNotice {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.02);
+    }
+}
+
 

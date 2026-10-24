@@ -26,6 +26,8 @@ class TicketManageController
         AuthMiddleware::checkAdmin();
 
         $filterNgay = trim($_GET['ngay'] ?? '');
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $perPage = 10;
 
         // Danh sách toàn bộ gói vé
         $packages = $this->goiVeModel->layTatCa();
@@ -33,21 +35,31 @@ class TicketManageController
         // Danh sách địa điểm có cờ bán vé để chọn khi thêm gói vé
         $ticketLocations = $this->diaDiemModel->danhSachAdmin(['co_ban_ve' => 1]);
 
-        // Danh sách tồn kho theo ngày
-        $inventories = $this->tonKhoModel->layDanhSach(50, $filterNgay ?: null);
+        // Danh sách tồn kho theo ngày có phân trang
+        $totalInventories = $this->tonKhoModel->demDanhSach($filterNgay ?: null);
+        $inventories = $this->tonKhoModel->layDanhSachPhanTrang($page, $perPage, $filterNgay ?: null);
 
         view('admin.tickets.index', [
-            'title'           => 'Quản Lý Gói Vé & Hạn Mức Tồn Kho',
-            'packages'        => $packages,
-            'ticketLocations' => $ticketLocations,
-            'inventories'     => $inventories,
-            'filterNgay'      => $filterNgay,
+            'title'            => 'Quản Lý Gói Vé & Hạn Mức Tồn Kho',
+            'packages'         => $packages,
+            'ticketLocations'  => $ticketLocations,
+            'inventories'      => $inventories,
+            'filterNgay'       => $filterNgay,
+            'page'             => $page,
+            'perPage'          => $perPage,
+            'totalInventories' => $totalInventories,
         ]);
     }
 
     public function createPackage(): void
     {
         AuthMiddleware::checkAdmin();
+
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ.');
+            redirect(url('admin/tickets'));
+            return;
+        }
 
         $diaDiemId = (int)($_POST['dia_diem_id'] ?? 0);
         $tenGoiVe = trim($_POST['ten_goi_ve'] ?? '');
@@ -82,6 +94,12 @@ class TicketManageController
     public function updatePackage(): void
     {
         AuthMiddleware::checkAdmin();
+
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ.');
+            redirect(url('admin/tickets'));
+            return;
+        }
 
         $id = (int)($_POST['id'] ?? 0);
         $diaDiemId = (int)($_POST['dia_diem_id'] ?? 0);
@@ -118,6 +136,12 @@ class TicketManageController
     {
         AuthMiddleware::checkAdmin();
 
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ.');
+            redirect(url('admin/tickets'));
+            return;
+        }
+
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) {
             $this->goiVeModel->xoa($id);
@@ -130,6 +154,12 @@ class TicketManageController
     public function setInventory(): void
     {
         AuthMiddleware::checkAdmin();
+
+        if (!validate_csrf()) {
+            flash('error', 'Phiên làm việc hết hạn hoặc yêu cầu không hợp lệ.');
+            redirect(url('admin/tickets'));
+            return;
+        }
 
         $goiVeId = (int)($_POST['goi_ve_id'] ?? 0);
         $ngaySuDung = trim($_POST['ngay_su_dung'] ?? '');

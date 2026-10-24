@@ -12,6 +12,7 @@
                 </div>
 
                 <form action="<?= url('register') ?>" method="POST">
+                    <?= csrf_field() ?>
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">Họ và tên <span class="text-danger">*</span></label>
                         <input type="text" name="ho_ten" class="form-control" placeholder="Nguyễn Văn A" required>

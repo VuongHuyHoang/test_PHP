@@ -64,21 +64,51 @@ class HomeController
         // 5. Địa điểm du lịch danh lam tiêu biểu
         $duLichList = $this->diaDiemModel->danhSach(['loai' => 'du_lich', 'limit' => 8]);
 
-        // 6. Thống kê nhanh toàn hệ thống
+        // 6. Toàn bộ tọa độ địa điểm cho bản đồ tương tác trang chủ
+        $allMapLocations = $this->diaDiemModel->layToaDoMap();
+
+        // 7. Thống kê nhanh toàn hệ thống
         $stats = [
             'totalLocations' => (int)$db->query("SELECT COUNT(*) FROM dia_diem WHERE trang_thai = 'hien_thi'")->fetchColumn(),
             'totalTickets'   => (int)$db->query("SELECT COUNT(*) FROM goi_ve WHERE trang_thai = 'dang_ban'")->fetchColumn(),
             'totalViews'     => (int)$db->query("SELECT COALESCE(SUM(luot_xem), 0) FROM dia_diem")->fetchColumn(),
         ];
 
+        // 8. Widget Thời tiết biển & Thủy triều Nha Trang
+        $weather = \App\Helpers\WeatherHelper::layThoiTietNhaTrang();
+
         view('client.home.index', [
-            'title'          => 'Khám Phá Ẩm Thực & Du Lịch Nha Trang - Đặt Vé & Bản Đồ Số',
-            'danhMucList'    => $danhMucList,
-            'spotlightList'  => $spotlightList,
-            'veOnlineList'   => $veOnlineList,
-            'amThucList'     => $amThucList,
-            'duLichList'     => $duLichList,
-            'stats'          => $stats,
+            'title'           => 'Khám Phá Nha Trang - Ẩm Thực & Du Lịch Biển Đảo',
+            'danhMucList'     => $danhMucList,
+            'spotlightList'   => $spotlightList,
+            'veOnlineList'    => $veOnlineList,
+            'amThucList'      => $amThucList,
+            'duLichList'      => $duLichList,
+            'allMapLocations' => $allMapLocations,
+            'stats'           => $stats,
+            'weather'         => $weather,
+        ]);
+    }
+
+    /**
+     * Trang Giới thiệu tổng quan về Nha Trang (Lịch sử, Khí hậu, Điểm đến, Ẩm thực, Con người)
+     */
+    public function about(): void
+    {
+        $weather = \App\Helpers\WeatherHelper::layThoiTietNhaTrang();
+        view('client.home.about', [
+            'title'   => 'Giới Thiệu Nha Trang - Thiên Đường Biển Đảo & Xứ Trầm Hương',
+            'weather' => $weather,
+        ]);
+    }
+
+    /**
+     * Trang Hướng dẫn sử dụng nền tảng Nha Trang Staycation
+     */
+    public function guide(): void
+    {
+        view('client.home.guide', [
+            'title' => 'Hướng Dẫn Sử Dụng Nền Tảng - Nha Trang Staycation'
         ]);
     }
 }

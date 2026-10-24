@@ -1,4 +1,11 @@
-<?php require_once dirname(__DIR__, 2) . '/layouts/header.php'; ?>
+<?php
+/**
+ * @var string $title
+ * @var array $donHang
+ * @var array $chiTiet
+ */
+require_once dirname(__DIR__, 2) . '/layouts/header.php';
+?>
 <?php require_once dirname(__DIR__, 2) . '/layouts/navbar.php'; ?>
 
 <style>
@@ -19,6 +26,12 @@
 <main class="container my-5 flex-grow-1">
     <div class="row justify-content-center">
         <div class="col-lg-8">
+            <!-- Stepper Tiến Trình Đặt Vé (Bước 3/3 - Hoàn Tất) -->
+            <?php 
+            $currentStep = 3;
+            include __DIR__ . '/_stepper.php'; 
+            ?>
+
             <!-- Phiếu E-Voucher -->
             <div class="card border-0 shadow-lg p-4 p-md-5 rounded-4 position-relative voucher-card" id="print-area">
                 <div class="text-center border-bottom pb-4 mb-4">
@@ -137,5 +150,22 @@
         </div>
     </div>
 </main>
+
+<?php if ($donHang['trang_thai_thanh_toan'] === 'da_thanh_toan'): ?>
+    <!-- Thư viện Canvas Confetti bắn pháo hoa chào mừng tại trang E-Voucher -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6']
+                });
+            }
+        });
+    </script>
+<?php endif; ?>
 
 <?php require_once dirname(__DIR__, 2) . '/layouts/footer.php'; ?>

@@ -19,6 +19,8 @@ desktop.ini
 # Logs & Temporary files
 *.log
 scratch/
+cloudflared.exe
+.agent/
 
 # Uploaded Files (keep folder structure)
 public/uploads/locations/*

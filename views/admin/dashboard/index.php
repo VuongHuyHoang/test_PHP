@@ -1,4 +1,20 @@
-<?php require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php'; ?>
+<?php
+/**
+ * @var string $title
+ * @var int $totalLocations
+ * @var int $totalOrders
+ * @var float|int $totalRevenue
+ * @var float|int $todayRevenue
+ * @var int $totalTicketsSold
+ * @var int $totalUsers
+ * @var array $recentOrders
+ * @var string $chartLabels
+ * @var string $chartRevenue
+ * @var string $chartOrders
+ * @var string $chartStatusData
+ */
+require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
+?>
 
 <!-- 4 Thẻ Thống Kê KPI -->
 <div class="row g-3 mb-4">

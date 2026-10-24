@@ -1,4 +1,16 @@
-<?php require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php'; ?>
+<?php
+/**
+ * @var string $title
+ * @var array $orders
+ * @var string $tuKhoa
+ * @var string $trangThaiDon
+ * @var string $trangThaiTt
+ * @var int|null $page
+ * @var int|null $perPage
+ * @var int|null $totalOrders
+ */
+require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
+?>
 
 <!-- Bộ Lọc & Tra Cứu Quét Mã E-Voucher -->
 <div class="card border-0 shadow-sm p-4 mb-4 rounded-4">
@@ -59,7 +71,7 @@
 <div class="card border-0 shadow-sm rounded-4">
     <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
         <h5 class="fw-bold mb-0 text-dark">
-            <i class="bi bi-list-check me-2 text-secondary"></i>Danh Sách Đơn Đặt Vé (<?= count($orders) ?> đơn)
+            <i class="bi bi-list-check me-2 text-secondary"></i>Danh Sách Đơn Đặt Vé (<?= number_format($totalOrders ?? count($orders)) ?> đơn)
         </h5>
     </div>
 
@@ -129,6 +141,7 @@
                                     
                                     <?php if ($o['trang_thai_don_hang'] !== 'hoan_thanh' && $o['trang_thai_don_hang'] !== 'da_huy'): ?>
                                         <form action="<?= url('admin/orders/update-status') ?>" method="POST" onsubmit="return confirm('Xác nhận đã kiểm tra E-Voucher và trao vé vào cổng cho khách hàng <?= htmlspecialchars($o['ten_khach_hang']) ?>?');">
+                                            <?= csrf_field() ?>
                                             <input type="hidden" name="don_hang_id" value="<?= (int)$o['id'] ?>">
                                             <input type="hidden" name="trang_thai" value="hoan_thanh">
                                             <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 fw-semibold">
@@ -143,6 +156,11 @@
                 <?php endif; ?>
             </tbody>
         </table>
+    </div>
+
+    <!-- Phân Trang Dữ Liệu -->
+    <div class="pb-3">
+        <?= phan_trang($totalOrders ?? count($orders), $perPage ?? 10, $page ?? 1, 'admin/orders', $_GET) ?>
     </div>
 </div>
 

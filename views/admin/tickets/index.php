@@ -1,9 +1,13 @@
 <?php
 /**
+ * @var string $title
  * @var array $ticketLocations
  * @var array $packages
  * @var array $inventories
  * @var string|null $filterNgay
+ * @var int|null $page
+ * @var int|null $perPage
+ * @var int|null $totalInventories
  */
 require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
 ?>
@@ -17,6 +21,55 @@ require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
     </div>
 </div>
 
+<!-- ========================================================
+     HƯỚNG DẪN SỬ DỤNG NHANH CHO QUẢN TRỊ VIÊN (USER GUIDE)
+     ======================================================== -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 bg-light-subtle border-start border-4 border-primary">
+    <div class="card-body p-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="fw-bold text-primary mb-0">
+                <i class="bi bi-lightbulb-fill me-2 text-warning"></i>Hướng Dẫn Vận Hành & Sử Dụng Chức Năng Bán Vé (3 Bước Đơn Giản)
+            </h6>
+            <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-1 rounded-pill">Quy trình chuẩn</span>
+        </div>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="p-3 bg-white rounded-3 shadow-sm h-100 border">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-primary rounded-circle px-2 py-1">1</span>
+                        <strong class="text-dark">Tạo Gói Vé (Cột Trái)</strong>
+                    </div>
+                    <p class="small text-muted mb-0">
+                        Chọn địa điểm có cờ <em>"Có bán vé"</em>, nhập tên gói vé (VD: <em>Vé Cáp Treo 2 Chiều</em>), cấu hình giá vé Người lớn, Trẻ em và mô tả quyền lợi. Vé sẽ hiển thị ngay cho du khách đặt trực tuyến.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 bg-white rounded-3 shadow-sm h-100 border">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-success rounded-circle px-2 py-1">2</span>
+                        <strong class="text-dark">Hạn Mức Theo Ngày (Cột Phải)</strong>
+                    </div>
+                    <p class="small text-muted mb-0">
+                        Vào ngày Lễ, Tết hoặc Cuối tuần cần khống chế số lượng để chống quá tải: Chọn Gói vé, chọn Ngày và đặt <strong>Tổng số vé phát hành</strong>. <em>(Ngày thường nếu không nhập, hệ thống tự động cấp hạn mức an toàn 500 vé/ngày khi khách đặt)</em>.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 bg-white rounded-3 shadow-sm h-100 border">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-info text-dark rounded-circle px-2 py-1">3</span>
+                        <strong class="text-dark">Trừ Kho & Soát Vé</strong>
+                    </div>
+                    <p class="small text-muted mb-0">
+                        Khi du khách đặt vé thành công, hệ thống sẽ tự động trừ vào <strong>Vé Còn Lại</strong>. Khi khách cầm mã QR E-Voucher đến quầy check-in, vào mục <a href="<?= url('admin/orders') ?>" class="fw-semibold text-primary text-decoration-none">Tra cứu & Soát vé</a> để quét mã và bấm <em>Đổi Vé</em>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-4">
     <!-- Cột 1: Quản lý Gói Vé (Bên trái) -->
     <div class="col-lg-6">
@@ -27,6 +80,7 @@ require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
             </h5>
 
             <form action="<?= url('admin/tickets/create-package') ?>" method="POST">
+                <?= csrf_field() ?>
                 <div class="mb-3">
                     <label class="form-label small fw-semibold">Địa điểm áp dụng <span class="text-danger">*</span></label>
                     <select name="dia_diem_id" class="form-select" required>
@@ -102,6 +156,7 @@ require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
                                     </td>
                                     <td class="text-end">
                                         <form action="<?= url('admin/tickets/delete-package') ?>" method="POST" onsubmit="return confirm('Bạn có chắc muốn tạm dừng / xóa gói vé này?');" class="d-inline">
+                                            <?= csrf_field() ?>
                                             <input type="hidden" name="id" value="<?= (int)$pkg['id'] ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill" title="Tạm dừng/Xóa">
                                                 <i class="bi bi-trash"></i>
@@ -126,6 +181,7 @@ require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
             </h5>
 
             <form action="<?= url('admin/tickets/set-inventory') ?>" method="POST">
+                <?= csrf_field() ?>
                 <div class="mb-3">
                     <label class="form-label small fw-semibold">Chọn gói vé áp dụng <span class="text-danger">*</span></label>
                     <select name="goi_ve_id" class="form-select" required>
@@ -158,10 +214,15 @@ require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
         <!-- Bảng Danh Sách Hạn Mức Tồn Kho -->
         <div class="card border-0 shadow-sm rounded-4">
             <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold mb-0 text-dark">Hạn Mức Theo Ngày Gần Đây</h5>
+                <h5 class="fw-bold mb-0 text-dark">Hạn Mức Theo Ngày Gần Đây (<?= number_format($totalInventories ?? count($inventories)) ?>)</h5>
                 <form action="<?= url('admin/tickets') ?>" method="GET" class="d-flex gap-2">
                     <input type="date" name="ngay" class="form-control form-control-sm" value="<?= htmlspecialchars($filterNgay ?? '') ?>">
                     <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill">Lọc</button>
+                    <?php if (!empty($filterNgay)): ?>
+                        <a href="<?= url('admin/tickets') ?>" class="btn btn-sm btn-outline-secondary rounded-pill" title="Xóa lọc">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    <?php endif; ?>
                 </form>
             </div>
             <div class="table-responsive">
@@ -209,6 +270,11 @@ require_once dirname(__DIR__, 2) . '/layouts/admin_layout.php';
                         <?php endif; ?>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Phân Trang Dữ Liệu Hạn Mức Tồn Kho -->
+            <div class="pb-3">
+                <?= phan_trang($totalInventories ?? count($inventories), $perPage ?? 10, $page ?? 1, 'admin/tickets', $_GET) ?>
             </div>
         </div>
     </div>

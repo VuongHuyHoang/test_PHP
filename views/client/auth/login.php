@@ -12,6 +12,7 @@
                 </div>
 
                 <form action="<?= url('login') ?>" method="POST">
+                    <?= csrf_field() ?>
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">Địa chỉ Email</label>
                         <div class="input-group">
