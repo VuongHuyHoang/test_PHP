@@ -223,5 +223,36 @@ CREATE TABLE `check_in_dia_diem` (
   CONSTRAINT `fk_checkin_location` FOREIGN KEY (`dia_diem_id`) REFERENCES `dia_diem` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 13. BANG AI_CHAT_MESSAGES (LICH SU TRO CHUYEN AI TOUR)
+DROP TABLE IF EXISTS `ai_chat_messages`;
+CREATE TABLE `ai_chat_messages` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT UNSIGNED NOT NULL,
+  `role` ENUM('user', 'model') NOT NULL,
+  `message` LONGTEXT NOT NULL,
+  `matched_locations` JSON NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_chat` (`user_id`, `id` DESC),
+  CONSTRAINT `fk_aichat_user` FOREIGN KEY (`user_id`) REFERENCES `nguoi_dung` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 14. BANG AI_SAVED_ITINERARIES (LICH TRINH AI DA LUU)
+DROP TABLE IF EXISTS `ai_saved_itineraries`;
+CREATE TABLE `ai_saved_itineraries` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT UNSIGNED NOT NULL,
+  `tieu_de` VARCHAR(255) NOT NULL,
+  `so_ngay` INT UNSIGNED NOT NULL DEFAULT 1,
+  `phong_cach` VARCHAR(100) DEFAULT NULL,
+  `ngan_sach` VARCHAR(100) DEFAULT NULL,
+  `noi_dung_markdown` LONGTEXT NOT NULL,
+  `dia_diem_ids` JSON NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_saved_tours` (`user_id`, `id` DESC),
+  CONSTRAINT `fk_saved_tours_user` FOREIGN KEY (`user_id`) REFERENCES `nguoi_dung` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 

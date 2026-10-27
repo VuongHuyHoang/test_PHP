@@ -24,10 +24,13 @@ try {
     if (!file_exists($schemaFile)) {
         die("[LỖI] Không tìm thấy file schema_vi.sql\n");
     }
-    echo "Đang khởi tạo 10 bảng dữ liệu từ schema_vi.sql...\n";
+    echo "Đang khởi tạo 14 bảng dữ liệu từ schema_vi.sql...\n";
     $schemaSql = file_get_contents($schemaFile);
+    if ($dbName !== 'nhatrang_tourism') {
+        $schemaSql = str_replace('`nhatrang_tourism`', "`{$dbName}`", $schemaSql);
+    }
     $pdo->exec($schemaSql);
-    echo "[OK] Đã tạo thành công cơ sở dữ liệu '{$dbName}' và 10 bảng quan hệ chuẩn 3NF.\n";
+    echo "[OK] Đã tạo thành công cơ sở dữ liệu '{$dbName}' và 14 bảng quan hệ chuẩn 3NF.\n";
 
     // 2. Chạy Seed Data
     $seedFile = __DIR__ . '/seeds/sample_data.sql';
@@ -38,8 +41,29 @@ try {
     $seedSql = file_get_contents($seedFile);
     $pdo->exec($seedSql);
     echo "[OK] Nạp dữ liệu mẫu thành công!\n";
+
+    // 3. Chạy Gallery Seed (Thư viện ảnh địa điểm)
+    $gallerySeedFile = __DIR__ . '/seeds/gallery_seed.php';
+    if (file_exists($gallerySeedFile)) {
+        echo "Đang nạp bộ sưu tập ảnh trải nghiệm (Gallery Seed)...\n";
+        require $gallerySeedFile;
+        echo "[OK] Nạp thư viện ảnh thành công!\n";
+    }
+
+    // 4. Chạy toàn bộ Migrations tự động
+    $migrationFiles = glob(__DIR__ . '/migrations/*.php');
+    if (!empty($migrationFiles)) {
+        echo "Đang đồng bộ các migrations bổ sung...\n";
+        sort($migrationFiles);
+        foreach ($migrationFiles as $migFile) {
+            require $migFile;
+        }
+        echo "[OK] Đồng bộ migrations thành công!\n";
+    }
+
     echo "===============================================\n";
     echo "HỆ THỐNG ĐÃ SẴN SÀNG SỬ DỤNG!\n";
+    echo "- Đã khởi tạo: 14 bảng dữ liệu, 15 địa điểm mẫu, 24 ảnh gallery, AI Tour & Đặt vé VietQR\n";
     echo "- Tài khoản Admin: admin@nhatrangtourism.vn / Admin@123\n";
     echo "- Tài khoản Khách: nguyenan@gmail.com / Khach@123\n";
 

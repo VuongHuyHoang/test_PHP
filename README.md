@@ -195,13 +195,7 @@ Khởi động dịch vụ MySQL (trên XAMPP/WAMP hoặc MySQL Service), sau đ
 ```bash
 php database/init_db.php
 ```
-*Script sẽ tự động tạo cơ sở dữ liệu `nhatrang_staycation`, khởi tạo 12 bảng quan hệ chuẩn và nạp sẵn 15 địa điểm Nha Trang kèm vé và tài khoản thử nghiệm.*
-
-Chạy các file migration bổ sung (nếu có):
-```bash
-php database/migrations/004_create_ai_chat_messages.php
-php database/migrations/005_create_ai_saved_itineraries.php
-```
+*Script sẽ tự động tạo cơ sở dữ liệu, khởi tạo toàn bộ 14 bảng quan hệ chuẩn 3NF, nạp 15 địa điểm thực tế, 23 ảnh gallery chất lượng cao và tự động đồng bộ mọi migration (AI Chat, Lịch trình đã lưu).*
 
 ### Bước 4: Khởi động máy chủ phát triển
 Chạy máy chủ tích hợp của PHP trỏ vào thư mục `public`:

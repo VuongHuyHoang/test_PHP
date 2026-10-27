@@ -28,4 +28,5 @@ public/uploads/locations/*
 public/uploads/qrcodes/*
 !public/uploads/qrcodes/.gitkeep
 public/uploads/*.txt
+public/uploads/*.json
 
